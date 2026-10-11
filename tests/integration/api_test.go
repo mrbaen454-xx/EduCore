@@ -32,6 +32,16 @@ func newTestServer(pool *pgxpool.Pool) *httpserver.Server {
 		HTTPIdleTimeout:     10 * time.Second,
 		HTTPShutdownTimeout: 5 * time.Second,
 		DBHealthTimeout:     2 * time.Second,
+		JWTSecret:           "test-secret-key-that-is-at-least-32-chars-long!",
+		JWTIssuer:           "educore-api",
+		JWTAudience:         "educore-app",
+		JWTAccessTokenTTL:   15 * time.Minute,
+		JWTRefreshTokenTTL:  7 * 24 * time.Hour,
+		Argon2Memory:        16 * 1024,
+		Argon2Iterations:    1,
+		Argon2Parallelism:   1,
+		Argon2SaltLength:    16,
+		Argon2KeyLength:     32,
 	}
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
 	return httpserver.New(cfg, logger, pool)

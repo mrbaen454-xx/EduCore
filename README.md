@@ -39,10 +39,10 @@ Salin konfigurasi environment dari template:
   ```bash
   cp .env.example .env
   ```
-Sesuaikan nilai `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, dan `DB_NAME` pada file `.env`.
+Sesuaikan nilai `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, dan `JWT_SECRET` pada file `.env`.
 
 ### 2.3 Menjalankan Migrasi Skema
-Sebelum menjalankan aplikasi, terapkan migrasi skema baseline (`roles`, `users`, `user_roles`):
+Sebelum menjalankan aplikasi, terapkan migrasi skema database:
 ```bash
 # Menggunakan Go CLI:
 go run ./cmd/migrate up
@@ -85,8 +85,8 @@ Server akan mendengarkan request HTTP di port `8080` (sesuai konfigurasi `APP_PO
 | `DB_HOST` | string | `localhost` | Host database PostgreSQL |
 | `DB_PORT` | int | `5432` | Port database PostgreSQL |
 | `DB_NAME` | string | `educore` | Nama basis data aplikasi |
-| `DB_USER` | string | `educore_app` | Username akun PostgreSQL |
-| `DB_PASSWORD` | string | `""` | Kata sandi database (wajib diisi sesuai server) |
+| `DB_USER` | string | `postgres` | Username akun PostgreSQL |
+| `DB_PASSWORD` | string | `""` | Kata sandi database |
 | `DB_SSLMODE` | string | `disable` | Mode SSL PostgreSQL (`disable`, `require`, `verify-full`) |
 | `DB_MAX_CONNS` | int | `10` | Batas maksimum koneksi pool |
 | `DB_MIN_CONNS` | int | `2` | Jumlah koneksi idle minimum pool |
@@ -94,17 +94,32 @@ Server akan mendengarkan request HTTP di port `8080` (sesuai konfigurasi `APP_PO
 | `DB_MAX_CONN_IDLE_TIME` | duration | `5m` | Waktu idle maksimum koneksi pool |
 | `DB_CONNECT_TIMEOUT` | duration | `5s` | Timeout koneksi awal dan ping startup |
 | `DB_HEALTH_TIMEOUT` | duration | `2s` | Timeout ping database pada readiness check |
+| `JWT_SECRET` | string | *wajib* | Secret key signing HS256 (min 32 karakter) |
+| `JWT_ISSUER` | string | `educore-auth` | Penerbit klaim `iss` pada JWT |
+| `JWT_AUDIENCE` | string | `educore-api` | Target penerima klaim `aud` pada JWT |
+| `JWT_ACCESS_TOKEN_TTL`| duration | `15m` | Masa berlaku JWT Access Token |
+| `JWT_REFRESH_TOKEN_TTL`| duration | `168h` | Masa berlaku Refresh Token (7 hari) |
+| `ARGON2_MEMORY` | uint32 | `65536` | Alokasi memori hashing Argon2id (KiB) |
+| `ARGON2_ITERATIONS` | uint32 | `3` | Jumlah iterasi/time cost Argon2id |
+| `ARGON2_PARALLELISM` | uint8 | `4` | Tingkat paralelisme thread Argon2id |
+| `ARGON2_SALT_LENGTH` | uint32 | `16` | Panjang random salt (bytes) |
+| `ARGON2_KEY_LENGTH` | uint32 | `32` | Panjang output hash key (bytes) |
 
 ---
 
 ## 4. Endpoint Tersedia
 
-### 4.1 Probe Infrastruktur
+### 4.1 Probe Infrastruktur & Diagnostik
 - `GET /health/live`: Mengecek apakah proses server berjalan (*liveness probe*).
-- `GET /health/ready`: Mengecek kesiapan server dan konektivitas aktif ke pool PostgreSQL (*readiness probe*). Mengembalikan HTTP 200 jika database `up` atau 503 jika `down`.
-
-### 4.2 Endpoint Diagnostik API
+- `GET /health/ready`: Mengecek kesiapan server dan konektivitas aktif ke pool PostgreSQL (*readiness probe*).
 - `GET /api/v1/health`: Mengecek status operasional modul REST API v1.
+
+### 4.2 Autentikasi & Pengguna (Fase 05)
+- `POST /api/v1/auth/login`: Login pengguna dengan identifier & password; menghasilkan Access Token & Refresh Token.
+- `POST /api/v1/auth/refresh`: Memperbarui Access Token dengan mekanisme rotasi Refresh Token otomatis.
+- `POST /api/v1/auth/logout`: Mencabut refresh token aktif untuk mengakhiri sesi pengguna.
+- `GET /api/v1/users/me`: Mengambil profil dan roles pengguna yang sedang login (membutuhkan header `Authorization: Bearer <token>`).
+- `GET /api/v1/test/admin-only`: Endpoint pengujian otorisasi RBAC (hanya dapat diakses oleh role `ADMIN`).
 
 ---
 
@@ -119,27 +134,39 @@ curl -i http://localhost:8080/health/live
 ```bash
 curl -i http://localhost:8080/health/ready
 ```
-*Respons:*
-```json
-{
-  "status": "ready",
-  "timestamp": "2026-10-11T23:00:00Z",
-  "checks": {
-    "database": "up"
-  }
-}
+
+### C. Login Pengguna
+```bash
+curl -i -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"identifier":"admin@educore.ac.id","password":"YourSecurePassword"}'
 ```
 
-### C. API v1 Health Check (Dengan Custom Request ID)
+### D. Mengakses Profil Pengguna Terautentikasi
 ```bash
-curl -i -H "X-Request-ID: test-custom-req-001" http://localhost:8080/api/v1/health
+curl -i http://localhost:8080/api/v1/users/me \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+### E. Merotasi Refresh Token
+```bash
+curl -i -X POST http://localhost:8080/api/v1/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{"refresh_token":"<REFRESH_TOKEN>"}'
+```
+
+### F. Logout / Pencabutan Sesi
+```bash
+curl -i -X POST http://localhost:8080/api/v1/auth/logout \
+  -H "Content-Type: application/json" \
+  -d '{"refresh_token":"<REFRESH_TOKEN>"}'
 ```
 
 ---
 
 ## 6. Pengujian dan Kualitas Kode
 
-Jalankan rangkaian pengujian otomatis (membutuhkan database `educore_test` yang aktif):
+Jalankan seluruh suite pengujian otomatis (membutuhkan database `educore_test` yang aktif):
 
 ```bash
 # Format kode sesuai standar Go
@@ -174,24 +201,30 @@ make db-version
 
 ## 7. Dokumentasi Lengkap Proyek
 
-- **Database**:
+- **Keamanan & Autentikasi (Fase 05)**:
+  - [Dokumentasi Autentikasi](file:///d:/share/SARONI/PROJECTS/EduCore/docs/security/authentication.md)
+  - [Dokumentasi Otorisasi & RBAC](file:///d:/share/SARONI/PROJECTS/EduCore/docs/security/authorization.md)
+  - [Siklus Hidup Token & Sesi](file:///d:/share/SARONI/PROJECTS/EduCore/docs/security/token-lifecycle.md)
+- **Database (Fase 04)**:
   - [Arsitektur Database](file:///d:/share/SARONI/PROJECTS/EduCore/docs/database/database-architecture.md)
   - [Konvensi Skema & Data Types](file:///d:/share/SARONI/PROJECTS/EduCore/docs/database/schema-conventions.md)
   - [Panduan Migrasi](file:///d:/share/SARONI/PROJECTS/EduCore/docs/database/migrations.md)
   - [Panduan Operasional & Backup](file:///d:/share/SARONI/PROJECTS/EduCore/docs/database/operations.md)
-- **REST API**:
+- **REST API (Fase 03)**:
   - [Spesifikasi OpenAPI 3.0](file:///d:/share/SARONI/PROJECTS/EduCore/api/openapi.yaml)
   - [Konvensi REST API](file:///d:/share/SARONI/PROJECTS/EduCore/docs/api/rest-api-conventions.md)
   - [Kamus Kode Error](file:///d:/share/SARONI/PROJECTS/EduCore/docs/api/error-codes.md)
-- **Arsitektur & Bisnis**:
+- **Arsitektur & Bisnis (Fase 01 & 02)**:
   - [Panduan Modul Bisnis](file:///d:/share/SARONI/PROJECTS/EduCore/internal/modules/README.md)
   - [Ikhtisar Bisnis SIAKAD](file:///d:/share/SARONI/PROJECTS/EduCore/docs/requirements/business-overview.md)
 
 ---
 
-## 8. Batasan Fitur pada Fase 04
+## 8. Status Roadmap & Batasan Fitur
 
-Fase 04 berfokus pada **Fondasi Database PostgreSQL**. Fitur-fitur berikut dijadwalkan pada fase berikutnya:
-- **Fase 05**: Autentikasi Pengguna & Otorisasi RBAC (Registrasi, Login, Password Hashing bcrypt, JWT, Refresh Token, Middleware Auth).
-- **Fase 06+**: Modul Bisnis Akademik (Fakultas, Prodi, Mahasiswa, Dosen, Kurikulum, KRS/IRS, Jadwal, Presensi, Penilaian, IP/IPK, Transkrip).
-
+- **Fase 01**: Kebutuhan & Desain Arsitektur SIAKAD (Selesai)
+- **Fase 02**: Kerangka Fondasi Backend & Graceful Shutdown (Selesai)
+- **Fase 03**: Fondasi REST API, Middleware, Error Handling, Routing (Selesai)
+- **Fase 04**: Database PostgreSQL, Connection Pool, Transaksi, Migrasi (Selesai)
+- **Fase 05**: Autentikasi & Otorisasi RBAC, Argon2id, JWT, Refresh Token Rotation (Selesai)
+- **Fase 06+**: Modul Bisnis Akademik (Fakultas, Prodi, Mahasiswa, Dosen, Kurikulum, KRS/IRS, Jadwal, Presensi, Penilaian, IP/IPK, Transkrip) *(Belum dimulai)*

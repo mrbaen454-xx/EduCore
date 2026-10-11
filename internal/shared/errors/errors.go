@@ -20,6 +20,7 @@ const (
 	CodeUnsupportedMediaType  = "UNSUPPORTED_MEDIA_TYPE"
 	CodeDependencyUnavailable = "DEPENDENCY_UNAVAILABLE"
 	CodeInternalError         = "INTERNAL_ERROR"
+	CodeInvalidCredentials    = "INVALID_CREDENTIALS"
 )
 
 // Detail represents a granular field-level or contextual error detail.
@@ -98,6 +99,12 @@ func ErrUnauthorized(message string) *AppError {
 		message = "Autentikasi diperlukan untuk mengakses resource ini"
 	}
 	return New(http.StatusUnauthorized, CodeUnauthorized, message)
+}
+
+// ErrInvalidCredentials returns an AppError for failed login attempts (HTTP 401).
+// Uses a generic message to prevent account enumeration.
+func ErrInvalidCredentials() *AppError {
+	return New(http.StatusUnauthorized, CodeInvalidCredentials, "Identifier atau password tidak valid")
 }
 
 // ErrForbidden returns an AppError when user has no permission (HTTP 403).

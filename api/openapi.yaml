@@ -3,8 +3,8 @@ info:
   title: EduCore Academic Management System API
   description: >
     Fondasi REST API EduCore (SIAKAD) - Modular Monolith backend.
-    Spesifikasi ini mencakup endpoint diagnostik dan health check yang tersedia pada Fase 03.
-  version: 1.0.0
+    Spesifikasi ini mencakup endpoint diagnostik, health check, serta Autentikasi dan Otorisasi (Fase 05).
+  version: 1.1.0
 servers:
   - url: http://localhost:8080
     description: Lingkungan Development Lokal
@@ -33,7 +33,7 @@ paths:
   /health/ready:
     get:
       summary: Readiness Probe
-      description: Memeriksa apakah aplikasi siap menerima traffic HTTP.
+      description: Memeriksa apakah aplikasi siap menerima traffic HTTP dan database terhubung.
       operationId: getHealthReady
       parameters:
         - $ref: '#/components/parameters/XRequestIDHeader'
@@ -72,7 +72,137 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/auth/login:
+    post:
+      summary: Login Pengguna
+      description: Autentikasi pengguna menggunakan identifier (email/username) dan password. Menerbitkan access token JWT dan refresh token.
+      operationId: authLogin
+      tags:
+        - Authentication
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login berhasil
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/XRequestID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginSuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/auth/refresh:
+    post:
+      summary: Refresh Access Token
+      description: Memperbarui access token yang telah kedaluwarsa dengan mekanisme Refresh Token Rotation.
+      operationId: authRefresh
+      tags:
+        - Authentication
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token berhasil diperbarui
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/XRequestID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefreshSuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/auth/logout:
+    post:
+      summary: Logout Sesi
+      description: Mencabut refresh token aktif untuk mengakhiri sesi pengguna.
+      operationId: authLogout
+      tags:
+        - Authentication
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '200':
+          description: Logout berhasil dan sesi dicabut
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/XRequestID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/users/me:
+    get:
+      summary: Profil Pengguna Terautentikasi
+      description: Mengambil data profil dan role pengguna yang saat ini sedang login berdasarkan JWT Access Token.
+      operationId: getCurrentUserProfile
+      tags:
+        - Users
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+      responses:
+        '200':
+          description: Profil berhasil diambil
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/XRequestID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileSuccessResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Kirim JWT Access Token pada header Authorization dengan format: Bearer <token>
+
   parameters:
     XRequestIDHeader:
       name: X-Request-ID
@@ -126,6 +256,42 @@ components:
               details:
                 - field: email
                   message: Format 'email' harus berupa alamat email yang valid
+            meta:
+              request_id: 9f3c7e4a1b2d8e6f0c4a7b9e1d3f5a8b
+
+    UnauthorizedError:
+      description: Autentikasi gagal atau access token tidak valid / tidak disertakan
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/XRequestID'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: Kredensial tidak valid atau token tidak sah
+            error:
+              code: INVALID_CREDENTIALS
+              details: []
+            meta:
+              request_id: 9f3c7e4a1b2d8e6f0c4a7b9e1d3f5a8b
+
+    ForbiddenError:
+      description: Akses ditolak karena role / izin tidak mencukupi
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/XRequestID'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: Akses ditolak. Role Anda tidak memiliki izin.
+            error:
+              code: FORBIDDEN
+              details: []
             meta:
               request_id: 9f3c7e4a1b2d8e6f0c4a7b9e1d3f5a8b
 
@@ -256,6 +422,9 @@ components:
                 http_server:
                   type: string
                   example: up
+                database:
+                  type: string
+                  example: connected
         meta:
           type: object
           nullable: true
@@ -280,7 +449,7 @@ components:
           properties:
             version:
               type: string
-              example: 1.0.0
+              example: 1.1.0
             environment:
               type: string
               example: development
@@ -288,6 +457,162 @@ components:
           type: object
           nullable: true
           example: null
+
+    LoginRequest:
+      type: object
+      required:
+        - identifier
+        - password
+      properties:
+        identifier:
+          type: string
+          description: Email atau username terdaftar
+          example: admin@educore.ac.id
+        password:
+          type: string
+          format: password
+          description: Password akun (min 8 karakter)
+          example: Rahasia123!
+
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refresh_token
+      properties:
+        refresh_token:
+          type: string
+          description: Refresh token mentah hex-encoded
+          example: e4d909c290d0fb1ca068ffaddf22cbd0a...
+
+    LogoutRequest:
+      type: object
+      required:
+        - refresh_token
+      properties:
+        refresh_token:
+          type: string
+          description: Refresh token sesi yang akan dicabut
+          example: e4d909c290d0fb1ca068ffaddf22cbd0a...
+
+    UserRole:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 11111111-1111-1111-1111-111111111111
+        code:
+          type: string
+          example: ADMIN
+        name:
+          type: string
+          example: Administrator
+
+    UserSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 22222222-2222-2222-2222-222222222222
+        username:
+          type: string
+          example: admin
+        email:
+          type: string
+          example: admin@educore.ac.id
+        full_name:
+          type: string
+          example: Administrator SIAKAD
+        status:
+          type: string
+          example: ACTIVE
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserRole'
+
+    LoginResponseData:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: JWT Access Token
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        token_type:
+          type: string
+          example: Bearer
+        expires_in:
+          type: integer
+          description: Masa berlaku access token dalam satuan detik
+          example: 900
+        refresh_token:
+          type: string
+          description: Refresh token rotasi
+          example: e4d909c290d0fb1ca068ffaddf22cbd0a...
+        user:
+          $ref: '#/components/schemas/UserSummary'
+
+    LoginSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Login berhasil
+        data:
+          $ref: '#/components/schemas/LoginResponseData'
+        meta:
+          type: object
+          nullable: true
+
+    TokenRefreshResponseData:
+      type: object
+      properties:
+        access_token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        token_type:
+          type: string
+          example: Bearer
+        expires_in:
+          type: integer
+          example: 900
+        refresh_token:
+          type: string
+          example: a1b2c3d4e5f6071829...
+
+    TokenRefreshSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Token berhasil diperbarui
+        data:
+          $ref: '#/components/schemas/TokenRefreshResponseData'
+        meta:
+          type: object
+          nullable: true
+
+    UserProfileSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Data profil berhasil diambil
+        data:
+          $ref: '#/components/schemas/UserSummary'
+        meta:
+          type: object
+          nullable: true
 
     ErrorDetail:
       type: object

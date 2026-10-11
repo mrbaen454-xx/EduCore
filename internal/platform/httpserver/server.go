@@ -8,6 +8,7 @@ import (
 
 	"educore/internal/config"
 	"educore/internal/middleware"
+	"educore/internal/modules/auth"
 	"educore/internal/platform/database"
 	appErrors "educore/internal/shared/errors"
 	"educore/internal/shared/response"
@@ -106,6 +107,20 @@ func New(cfg *config.Config, logger *slog.Logger, dbPool *pgxpool.Pool) *Server 
 				"environment": cfg.AppEnv,
 			}, nil)
 		})
+
+		// Register Authentication and User Profile routes if database is available
+		if dbPool != nil {
+			hasher := auth.NewArgon2Hasher(cfg.Argon2Memory, cfg.Argon2Iterations, cfg.Argon2Parallelism, cfg.Argon2SaltLength, cfg.Argon2KeyLength)
+			tokenMgr := auth.NewTokenManager(cfg)
+			repo := auth.NewRepository(dbPool)
+			service := auth.NewService(repo, hasher, tokenMgr, cfg, logger)
+			handler := auth.NewHandler(service, logger)
+
+			authMiddleware := middleware.Authenticate(tokenMgr)
+			adminMiddleware := middleware.RequireRoles("admin")
+
+			auth.RegisterRoutes(v1, handler, authMiddleware, adminMiddleware)
+		}
 	}
 
 	addr := fmt.Sprintf(":%d", cfg.AppPort)

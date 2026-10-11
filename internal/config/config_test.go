@@ -140,6 +140,10 @@ func TestLoadConfig_InvalidDatabaseConfig(t *testing.T) {
 		{"ZeroMaxConns", map[string]string{"DB_MAX_CONNS": "0"}},
 		{"MinConnsGreaterThanMax", map[string]string{"DB_MAX_CONNS": "5", "DB_MIN_CONNS": "10"}},
 		{"NegativeConnectTimeout", map[string]string{"DB_CONNECT_TIMEOUT": "-1s"}},
+		{"ShortJWTSecret", map[string]string{"JWT_SECRET": "too-short"}},
+		{"NegativeJWTAccessTTL", map[string]string{"JWT_ACCESS_TOKEN_TTL": "-15m"}},
+		{"NegativeJWTRefreshTTL", map[string]string{"JWT_REFRESH_TOKEN_TTL": "0s"}},
+		{"ZeroArgon2Memory", map[string]string{"ARGON2_MEMORY": "0"}},
 	}
 
 	for _, tt := range tests {

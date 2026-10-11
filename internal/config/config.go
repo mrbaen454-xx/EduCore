@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -31,10 +32,25 @@ type Config struct {
 	DBMaxConnIdleTime time.Duration
 	DBConnectTimeout  time.Duration
 	DBHealthTimeout   time.Duration
+
+	// JWT authentication configuration
+	JWTSecret          string
+	JWTIssuer          string
+	JWTAudience        string
+	JWTAccessTokenTTL  time.Duration
+	JWTRefreshTokenTTL time.Duration
+
+	// Argon2id password hashing configuration
+	Argon2Memory      uint32
+	Argon2Iterations  uint32
+	Argon2Parallelism uint8
+	Argon2SaltLength  uint32
+	Argon2KeyLength   uint32
 }
 
 // LoadConfig reads configuration from environment variables and provides safe defaults.
 func LoadConfig() (*Config, error) {
+	loadDotEnvIfExists(".env")
 	cfg := &Config{
 		AppEnv:              getEnvOrDefault("APP_ENV", "development"),
 		AppPort:             getEnvAsIntOrDefault("APP_PORT", 8080),
@@ -58,6 +74,20 @@ func LoadConfig() (*Config, error) {
 		DBMaxConnIdleTime: getEnvAsDurationOrDefault("DB_MAX_CONN_IDLE_TIME", 5*time.Minute),
 		DBConnectTimeout:  getEnvAsDurationOrDefault("DB_CONNECT_TIMEOUT", 5*time.Second),
 		DBHealthTimeout:   getEnvAsDurationOrDefault("DB_HEALTH_TIMEOUT", 2*time.Second),
+
+		// JWT defaults
+		JWTSecret:          getEnvOrDefault("JWT_SECRET", "super-secret-key-that-is-at-least-32-chars-long-for-dev!"),
+		JWTIssuer:          getEnvOrDefault("JWT_ISSUER", "educore-api"),
+		JWTAudience:        getEnvOrDefault("JWT_AUDIENCE", "educore-app"),
+		JWTAccessTokenTTL:  getEnvAsDurationOrDefault("JWT_ACCESS_TOKEN_TTL", 15*time.Minute),
+		JWTRefreshTokenTTL: getEnvAsDurationOrDefault("JWT_REFRESH_TOKEN_TTL", 7*24*time.Hour),
+
+		// Argon2id defaults (OWASP recommendations)
+		Argon2Memory:      uint32(getEnvAsIntOrDefault("ARGON2_MEMORY", 64*1024)),
+		Argon2Iterations:  uint32(getEnvAsIntOrDefault("ARGON2_ITERATIONS", 3)),
+		Argon2Parallelism: uint8(getEnvAsIntOrDefault("ARGON2_PARALLELISM", 2)),
+		Argon2SaltLength:  uint32(getEnvAsIntOrDefault("ARGON2_SALT_LENGTH", 16)),
+		Argon2KeyLength:   uint32(getEnvAsIntOrDefault("ARGON2_KEY_LENGTH", 32)),
 	}
 
 	if err := validate(cfg); err != nil {
@@ -126,6 +156,22 @@ func validate(cfg *Config) error {
 		return fmt.Errorf("database timeouts and lifetimes must be greater than zero")
 	}
 
+	// JWT validation
+	if len(cfg.JWTSecret) < 32 {
+		return fmt.Errorf("JWT_SECRET must be at least 32 characters long for security")
+	}
+	if cfg.JWTAccessTokenTTL <= 0 {
+		return fmt.Errorf("JWT_ACCESS_TOKEN_TTL must be greater than zero")
+	}
+	if cfg.JWTRefreshTokenTTL <= 0 {
+		return fmt.Errorf("JWT_REFRESH_TOKEN_TTL must be greater than zero")
+	}
+
+	// Argon2id validation
+	if cfg.Argon2Memory == 0 || cfg.Argon2Iterations == 0 || cfg.Argon2Parallelism == 0 || cfg.Argon2SaltLength == 0 || cfg.Argon2KeyLength == 0 {
+		return fmt.Errorf("argon2id parameters must be greater than zero")
+	}
+
 	return nil
 }
 
@@ -158,4 +204,27 @@ func getEnvAsDurationOrDefault(key string, fallback time.Duration) time.Duration
 		return fallback
 	}
 	return value
+}
+
+func loadDotEnvIfExists(path string) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return
+	}
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			k := strings.TrimSpace(parts[0])
+			v := strings.TrimSpace(parts[1])
+			v = strings.Trim(v, `"'`)
+			if os.Getenv(k) == "" {
+				_ = os.Setenv(k, v)
+			}
+		}
+	}
 }
