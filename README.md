@@ -1,39 +1,72 @@
 # EduCore - Academic Management System (SIAKAD)
 
-EduCore adalah backend Sistem Informasi Akademik berbasis Go dengan arsitektur **Modular Monolith** dan REST API.
+EduCore adalah backend Sistem Informasi Akademik berbasis Go dengan arsitektur **Modular Monolith**, REST API, dan PostgreSQL.
 
 ---
 
 ## 1. Prasyarat
 
-- Go 1.27 atau lebih baru
+- Go 1.22 atau lebih baru (teruji pada Go 1.24)
+- PostgreSQL 16+ (atau Docker / Docker Compose)
 - Git
 - Make (Opsional, untuk menjalankan target di Makefile)
 
 ---
 
-## 2. Menjalankan Aplikasi Lokal
+## 2. Menyiapkan Database dan Menjalankan Aplikasi
 
-1. Salin konfigurasi environment dari template:
-   - Windows PowerShell / Command Prompt:
-     ```powershell
-     copy .env.example .env
-     ```
-   - Linux / macOS:
-     ```bash
-     cp .env.example .env
-     ```
-2. Sesuaikan konfigurasi pada file `.env` jika diperlukan.
-3. Jalankan aplikasi:
-   - Menggunakan Make:
-     ```bash
-     make run
-     ```
-   - Menggunakan Go CLI secara langsung:
-     ```bash
-     go run cmd/api/main.go
-     ```
-4. Server akan mendengarkan request HTTP di port `8080` (sesuai konfigurasi `APP_PORT`).
+### 2.1 Menyiapkan PostgreSQL
+
+#### Opsi A: Menggunakan Docker Compose
+```bash
+docker compose up -d postgres
+```
+
+#### Opsi B: Menggunakan PostgreSQL Lokal
+Pastikan service PostgreSQL aktif dan buat database berikut:
+```sql
+CREATE DATABASE educore;
+CREATE DATABASE educore_test;
+```
+
+### 2.2 Menyiapkan Konfigurasi Lingkungan
+Salin konfigurasi environment dari template:
+- Windows PowerShell:
+  ```powershell
+  copy .env.example .env
+  ```
+- Linux / macOS:
+  ```bash
+  cp .env.example .env
+  ```
+Sesuaikan nilai `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, dan `DB_NAME` pada file `.env`.
+
+### 2.3 Menjalankan Migrasi Skema
+Sebelum menjalankan aplikasi, terapkan migrasi skema baseline (`roles`, `users`, `user_roles`):
+```bash
+# Menggunakan Go CLI:
+go run ./cmd/migrate up
+
+# Atau menggunakan Makefile:
+make db-up
+```
+
+Untuk memeriksa versi migrasi saat ini:
+```bash
+go run ./cmd/migrate version
+```
+
+### 2.4 Menjalankan Server Backend
+Jalankan aplikasi:
+- Menggunakan Make:
+  ```bash
+  make run
+  ```
+- Menggunakan Go CLI secara langsung:
+  ```bash
+  go run ./cmd/api
+  ```
+Server akan mendengarkan request HTTP di port `8080` (sesuai konfigurasi `APP_PORT`).
 
 ---
 
@@ -49,14 +82,26 @@ EduCore adalah backend Sistem Informasi Akademik berbasis Go dengan arsitektur *
 | `HTTP_WRITE_TIMEOUT` | duration | `15s` | Timeout penulisan response HTTP |
 | `HTTP_IDLE_TIMEOUT` | duration | `60s` | Timeout koneksi idle HTTP keep-alive |
 | `HTTP_SHUTDOWN_TIMEOUT`| duration | `10s` | Batas waktu graceful shutdown server |
+| `DB_HOST` | string | `localhost` | Host database PostgreSQL |
+| `DB_PORT` | int | `5432` | Port database PostgreSQL |
+| `DB_NAME` | string | `educore` | Nama basis data aplikasi |
+| `DB_USER` | string | `educore_app` | Username akun PostgreSQL |
+| `DB_PASSWORD` | string | `""` | Kata sandi database (wajib diisi sesuai server) |
+| `DB_SSLMODE` | string | `disable` | Mode SSL PostgreSQL (`disable`, `require`, `verify-full`) |
+| `DB_MAX_CONNS` | int | `10` | Batas maksimum koneksi pool |
+| `DB_MIN_CONNS` | int | `2` | Jumlah koneksi idle minimum pool |
+| `DB_MAX_CONN_LIFETIME` | duration | `30m` | Waktu hidup maksimum koneksi pool |
+| `DB_MAX_CONN_IDLE_TIME` | duration | `5m` | Waktu idle maksimum koneksi pool |
+| `DB_CONNECT_TIMEOUT` | duration | `5s` | Timeout koneksi awal dan ping startup |
+| `DB_HEALTH_TIMEOUT` | duration | `2s` | Timeout ping database pada readiness check |
 
 ---
 
-## 4. Endpoint Tersedia (Fase 03: Fondasi REST API)
+## 4. Endpoint Tersedia
 
 ### 4.1 Probe Infrastruktur
 - `GET /health/live`: Mengecek apakah proses server berjalan (*liveness probe*).
-- `GET /health/ready`: Mengecek kesiapan server melayani traffic HTTP (*readiness probe*).
+- `GET /health/ready`: Mengecek kesiapan server dan konektivitas aktif ke pool PostgreSQL (*readiness probe*). Mengembalikan HTTP 200 jika database `up` atau 503 jika `down`.
 
 ### 4.2 Endpoint Diagnostik API
 - `GET /api/v1/health`: Mengecek status operasional modul REST API v1.
@@ -70,9 +115,19 @@ EduCore adalah backend Sistem Informasi Akademik berbasis Go dengan arsitektur *
 curl -i http://localhost:8080/health/live
 ```
 
-### B. Readiness Check
+### B. Readiness Check (Terhubung ke PostgreSQL)
 ```bash
 curl -i http://localhost:8080/health/ready
+```
+*Respons:*
+```json
+{
+  "status": "ready",
+  "timestamp": "2026-10-11T23:00:00Z",
+  "checks": {
+    "database": "up"
+  }
+}
 ```
 
 ### C. API v1 Health Check (Dengan Custom Request ID)
@@ -80,21 +135,11 @@ curl -i http://localhost:8080/health/ready
 curl -i -H "X-Request-ID: test-custom-req-001" http://localhost:8080/api/v1/health
 ```
 
-### D. Route Tidak Ditemukan (404 JSON)
-```bash
-curl -i http://localhost:8080/api/v1/route-yang-tidak-ada
-```
-
-### E. Metode HTTP Tidak Didukung (405 JSON)
-```bash
-curl -i -X DELETE http://localhost:8080/api/v1/health
-```
-
 ---
 
 ## 6. Pengujian dan Kualitas Kode
 
-Jalankan rangkaian pengujian otomatis:
+Jalankan rangkaian pengujian otomatis (membutuhkan database `educore_test` yang aktif):
 
 ```bash
 # Format kode sesuai standar Go
@@ -120,24 +165,33 @@ make vet
 make test
 make test-race
 make build
+make db-up
+make db-down
+make db-version
 ```
 
 ---
 
-## 7. Dokumentasi API & Arsitektur
+## 7. Dokumentasi Lengkap Proyek
 
-- **Spesifikasi OpenAPI 3.0**: [`api/openapi.yaml`](file:///d:/share/SARONI/PROJECTS/EduCore/api/openapi.yaml)
-- **Konvensi REST API**: [`docs/api/rest-api-conventions.md`](file:///d:/share/SARONI/PROJECTS/EduCore/docs/api/rest-api-conventions.md)
-- **Kamus Kode Error**: [`docs/api/error-codes.md`](file:///d:/share/SARONI/PROJECTS/EduCore/docs/api/error-codes.md)
-- **Panduan Modul Bisnis**: [`internal/modules/README.md`](file:///d:/share/SARONI/PROJECTS/EduCore/internal/modules/README.md)
-- **Ikhtisar Bisnis SIAKAD**: [`docs/requirements/business-overview.md`](file:///d:/share/SARONI/PROJECTS/EduCore/docs/requirements/business-overview.md)
+- **Database**:
+  - [Arsitektur Database](file:///d:/share/SARONI/PROJECTS/EduCore/docs/database/database-architecture.md)
+  - [Konvensi Skema & Data Types](file:///d:/share/SARONI/PROJECTS/EduCore/docs/database/schema-conventions.md)
+  - [Panduan Migrasi](file:///d:/share/SARONI/PROJECTS/EduCore/docs/database/migrations.md)
+  - [Panduan Operasional & Backup](file:///d:/share/SARONI/PROJECTS/EduCore/docs/database/operations.md)
+- **REST API**:
+  - [Spesifikasi OpenAPI 3.0](file:///d:/share/SARONI/PROJECTS/EduCore/api/openapi.yaml)
+  - [Konvensi REST API](file:///d:/share/SARONI/PROJECTS/EduCore/docs/api/rest-api-conventions.md)
+  - [Kamus Kode Error](file:///d:/share/SARONI/PROJECTS/EduCore/docs/api/error-codes.md)
+- **Arsitektur & Bisnis**:
+  - [Panduan Modul Bisnis](file:///d:/share/SARONI/PROJECTS/EduCore/internal/modules/README.md)
+  - [Ikhtisar Bisnis SIAKAD](file:///d:/share/SARONI/PROJECTS/EduCore/docs/requirements/business-overview.md)
 
 ---
 
-## 8. Batasan Fitur pada Fase 03
+## 8. Batasan Fitur pada Fase 04
 
-Fase 03 berfokus murni pada **Fondasi REST API**. Fitur-fitur berikut belum diimplementasikan pada fase ini dan dijadwalkan pada fase berikutnya:
-- Autentikasi pengguna & otorisasi RBAC (JWT, refresh token, password hashing).
-- Koneksi dan migrasi database PostgreSQL (pgxpool).
-- Modul bisnis akademik (Mahasiswa, Dosen, Mata Kuliah, KRS, Presensi, Penilaian, IP/IPK).
-- Antarmuka pengguna (Frontend web atau mobile).
+Fase 04 berfokus pada **Fondasi Database PostgreSQL**. Fitur-fitur berikut dijadwalkan pada fase berikutnya:
+- **Fase 05**: Autentikasi Pengguna & Otorisasi RBAC (Registrasi, Login, Password Hashing bcrypt, JWT, Refresh Token, Middleware Auth).
+- **Fase 06+**: Modul Bisnis Akademik (Fakultas, Prodi, Mahasiswa, Dosen, Kurikulum, KRS/IRS, Jadwal, Presensi, Penilaian, IP/IPK, Transkrip).
+

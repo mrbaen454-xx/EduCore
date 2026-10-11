@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"educore/internal/config"
+	"educore/internal/platform/database"
 	"educore/internal/platform/httpserver"
 	"educore/internal/platform/logger"
 )
@@ -25,8 +26,15 @@ func Run() error {
 	log := logger.New(cfg.LogLevel, cfg.AppEnv)
 	log.Info("Starting EduCore application", slog.String("env", cfg.AppEnv))
 
-	// Initialize HTTP server
-	server := httpserver.New(cfg, log)
+	// Initialize database connection pool
+	db, err := database.New(context.Background(), cfg, log)
+	if err != nil {
+		return fmt.Errorf("failed to initialize database: %w", err)
+	}
+	defer db.Close()
+
+	// Initialize HTTP server with database dependency
+	server := httpserver.New(cfg, log, db.Pool)
 
 	// Start server
 	serverErrChan := server.Start()

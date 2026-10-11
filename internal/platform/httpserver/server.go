@@ -8,10 +8,12 @@ import (
 
 	"educore/internal/config"
 	"educore/internal/middleware"
+	"educore/internal/platform/database"
 	appErrors "educore/internal/shared/errors"
 	"educore/internal/shared/response"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // Server represents the HTTP server.
@@ -19,10 +21,11 @@ type Server struct {
 	httpServer *http.Server
 	logger     *slog.Logger
 	engine     *gin.Engine
+	dbPool     *pgxpool.Pool
 }
 
-// New creates and configures a new Server instance.
-func New(cfg *config.Config, logger *slog.Logger) *Server {
+// New creates and configures a new Server instance with database health integration.
+func New(cfg *config.Config, logger *slog.Logger, dbPool *pgxpool.Pool) *Server {
 	// Set Gin mode based on app environment
 	if cfg.AppEnv == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -59,11 +62,37 @@ func New(cfg *config.Config, logger *slog.Logger) *Server {
 	})
 
 	engine.GET("/health/ready", func(c *gin.Context) {
-		// Readiness check currently verifies HTTP server readiness; DB check will be integrated in Phase 04
+		reqID := middleware.GetRequestID(c)
+		dbCheck := "up"
+
+		if dbPool != nil {
+			if err := database.CheckHealth(c.Request.Context(), dbPool, cfg.DBHealthTimeout); err != nil {
+				dbCheck = "down"
+				logger.Warn("readiness check failed: database unavailable",
+					slog.String("request_id", reqID),
+					slog.Any("error", err),
+				)
+			}
+		} else {
+			dbCheck = "uninitialized"
+		}
+
+		if dbCheck != "up" {
+			response.Error(c, http.StatusServiceUnavailable, appErrors.CodeDependencyUnavailable,
+				"Layanan aplikasi belum siap menerima traffic",
+				[]response.ErrorDetail{
+					{Field: "database", Message: "Koneksi database tidak tersedia"},
+				},
+				reqID,
+			)
+			return
+		}
+
 		response.OK(c, "Layanan aplikasi siap menerima traffic", gin.H{
 			"status": "ready",
 			"checks": gin.H{
 				"http_server": "up",
+				"database":    "up",
 			},
 		}, nil)
 	})

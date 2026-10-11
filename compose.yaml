@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: educore-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-educore}
+      POSTGRES_USER: ${DB_USER:-educore_app}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-educore_password}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - educore_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-educore_app} -d ${DB_NAME:-educore}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  educore_pgdata:
+    name: educore_pgdata

@@ -1,4 +1,4 @@
-.PHONY: run build test test-race fmt vet
+.PHONY: run build test test-race fmt vet db-up db-down db-version db-compose-up db-compose-down
 
 # Default port
 APP_PORT ?= 8080
@@ -20,4 +20,19 @@ fmt:
 
 vet:
 	go vet ./...
+
+db-up:
+	go run ./cmd/migrate up
+
+db-down:
+	go run ./cmd/migrate down -steps 1
+
+db-version:
+	go run ./cmd/migrate version
+
+db-compose-up:
+	docker compose up -d postgres
+
+db-compose-down:
+	docker compose down
 

@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -12,13 +13,15 @@ import (
 
 	"educore/internal/config"
 	"educore/internal/middleware"
+	"educore/internal/platform/database"
 	"educore/internal/platform/httpserver"
 	"educore/internal/shared/response"
 
 	"github.com/goccy/go-yaml"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func newTestServer() *httpserver.Server {
+func newTestServer(pool *pgxpool.Pool) *httpserver.Server {
 	cfg := &config.Config{
 		AppEnv:              "testing",
 		AppPort:             8080,
@@ -28,13 +31,14 @@ func newTestServer() *httpserver.Server {
 		HTTPWriteTimeout:    5 * time.Second,
 		HTTPIdleTimeout:     10 * time.Second,
 		HTTPShutdownTimeout: 5 * time.Second,
+		DBHealthTimeout:     2 * time.Second,
 	}
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
-	return httpserver.New(cfg, logger)
+	return httpserver.New(cfg, logger, pool)
 }
 
 func TestHealthLiveEndpoint(t *testing.T) {
-	server := newTestServer()
+	server := newTestServer(nil)
 
 	req := httptest.NewRequest("GET", "/health/live", nil)
 	w := httptest.NewRecorder()
@@ -70,8 +74,20 @@ func TestHealthLiveEndpoint(t *testing.T) {
 	}
 }
 
-func TestHealthReadyEndpoint(t *testing.T) {
-	server := newTestServer()
+func TestHealthReadyEndpoint_DatabaseUp(t *testing.T) {
+	cfg := getTestDBConfig()
+	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	db, err := database.New(ctx, cfg, logger)
+	if err != nil {
+		t.Fatalf("failed to connect to test database: %v", err)
+	}
+	defer db.Close()
+
+	server := newTestServer(db.Pool)
 
 	req := httptest.NewRequest("GET", "/health/ready", nil)
 	w := httptest.NewRecorder()
@@ -79,7 +95,7 @@ func TestHealthReadyEndpoint(t *testing.T) {
 	server.Router().ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected HTTP 200, got %d", w.Code)
+		t.Fatalf("expected HTTP 200, got %d. Body: %s", w.Code, w.Body.String())
 	}
 
 	var res response.Response
@@ -95,10 +111,40 @@ func TestHealthReadyEndpoint(t *testing.T) {
 	if !ok || dataMap["status"] != "ready" {
 		t.Errorf("expected data.status = 'ready', got %v", res.Data)
 	}
+	checks, ok := dataMap["checks"].(map[string]any)
+	if !ok || checks["database"] != "up" {
+		t.Errorf("expected checks.database = 'up', got %v", dataMap["checks"])
+	}
+}
+
+func TestHealthReadyEndpoint_DatabaseDown(t *testing.T) {
+	// Server configured without database connection pool
+	server := newTestServer(nil)
+
+	req := httptest.NewRequest("GET", "/health/ready", nil)
+	w := httptest.NewRecorder()
+
+	server.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected HTTP 503 Service Unavailable, got %d", w.Code)
+	}
+
+	var res response.ErrorResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &res); err != nil {
+		t.Fatalf("failed to parse JSON error response: %v", err)
+	}
+
+	if res.Success {
+		t.Errorf("expected success: false, got true")
+	}
+	if res.Error.Code != "DEPENDENCY_UNAVAILABLE" {
+		t.Errorf("expected code DEPENDENCY_UNAVAILABLE, got %s", res.Error.Code)
+	}
 }
 
 func TestAPIV1HealthEndpoint(t *testing.T) {
-	server := newTestServer()
+	server := newTestServer(nil)
 
 	req := httptest.NewRequest("GET", "/api/v1/health", nil)
 	w := httptest.NewRecorder()
@@ -125,7 +171,7 @@ func TestAPIV1HealthEndpoint(t *testing.T) {
 }
 
 func TestRouteNotFound_JSON404(t *testing.T) {
-	server := newTestServer()
+	server := newTestServer(nil)
 
 	req := httptest.NewRequest("GET", "/api/v1/non-existent-endpoint", nil)
 	w := httptest.NewRecorder()
@@ -153,7 +199,7 @@ func TestRouteNotFound_JSON404(t *testing.T) {
 }
 
 func TestMethodNotAllowed_JSON405(t *testing.T) {
-	server := newTestServer()
+	server := newTestServer(nil)
 
 	// DELETE on /api/v1/health should return 405 Method Not Allowed
 	req := httptest.NewRequest("DELETE", "/api/v1/health", nil)
@@ -182,7 +228,7 @@ func TestMethodNotAllowed_JSON405(t *testing.T) {
 }
 
 func TestCustomRequestIDPropagation(t *testing.T) {
-	server := newTestServer()
+	server := newTestServer(nil)
 
 	customReqID := "custom-trace-siakad-999"
 	req := httptest.NewRequest("GET", "/health/live", nil)
