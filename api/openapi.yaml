@@ -1,0 +1,337 @@
+openapi: 3.0.3
+info:
+  title: EduCore Academic Management System API
+  description: >
+    Fondasi REST API EduCore (SIAKAD) - Modular Monolith backend.
+    Spesifikasi ini mencakup endpoint diagnostik dan health check yang tersedia pada Fase 03.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Lingkungan Development Lokal
+
+paths:
+  /health/live:
+    get:
+      summary: Liveness Probe
+      description: Memeriksa apakah proses server EduCore masih berjalan.
+      operationId: getHealthLive
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+      responses:
+        '200':
+          description: Server berjalan normal
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/XRequestID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthLiveResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /health/ready:
+    get:
+      summary: Readiness Probe
+      description: Memeriksa apakah aplikasi siap menerima traffic HTTP.
+      operationId: getHealthReady
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+      responses:
+        '200':
+          description: Aplikasi siap menerima request
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/XRequestID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthReadyResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/health:
+    get:
+      summary: API v1 Health & Diagnostic
+      description: Endpoint diagnostik read-only untuk memverifikasi operasional modul API v1.
+      operationId: getAPIV1Health
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+      responses:
+        '200':
+          description: API v1 beroperasi normal
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/XRequestID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIV1HealthResponse'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  parameters:
+    XRequestIDHeader:
+      name: X-Request-ID
+      in: header
+      required: false
+      description: ID pelacakan request unik dari client (1-64 karakter alfanumerik, dash, underscore).
+      schema:
+        type: string
+        example: 9f3c7e4a1b2d8e6f0c4a7b9e1d3f5a8b
+
+  headers:
+    XRequestID:
+      description: ID pelacakan request unik yang diproses oleh server.
+      schema:
+        type: string
+        example: 9f3c7e4a1b2d8e6f0c4a7b9e1d3f5a8b
+
+  responses:
+    BadRequestError:
+      description: Request tidak valid atau rusak
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/XRequestID'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: Body request JSON tidak valid atau rusak
+            error:
+              code: BAD_REQUEST
+              details: []
+            meta:
+              request_id: 9f3c7e4a1b2d8e6f0c4a7b9e1d3f5a8b
+
+    ValidationError:
+      description: Validasi field request gagal
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/XRequestID'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: Validasi request gagal
+            error:
+              code: VALIDATION_ERROR
+              details:
+                - field: email
+                  message: Format 'email' harus berupa alamat email yang valid
+            meta:
+              request_id: 9f3c7e4a1b2d8e6f0c4a7b9e1d3f5a8b
+
+    NotFoundError:
+      description: Route atau resource tidak ditemukan
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/XRequestID'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: Endpoint tidak ditemukan
+            error:
+              code: ROUTE_NOT_FOUND
+              details: []
+            meta:
+              request_id: 9f3c7e4a1b2d8e6f0c4a7b9e1d3f5a8b
+
+    MethodNotAllowedError:
+      description: Metode HTTP tidak didukung pada endpoint ini
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/XRequestID'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: Metode HTTP tidak didukung untuk endpoint ini
+            error:
+              code: METHOD_NOT_ALLOWED
+              details: []
+            meta:
+              request_id: 9f3c7e4a1b2d8e6f0c4a7b9e1d3f5a8b
+
+    InternalServerError:
+      description: Kesalahan internal server yang tidak terduga
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/XRequestID'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: Terjadi kesalahan internal pada server
+            error:
+              code: INTERNAL_ERROR
+              details: []
+            meta:
+              request_id: 9f3c7e4a1b2d8e6f0c4a7b9e1d3f5a8b
+
+  schemas:
+    SuccessResponse:
+      type: object
+      required:
+        - success
+        - message
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Request berhasil diproses
+        data:
+          type: object
+          nullable: true
+        meta:
+          type: object
+          nullable: true
+
+    HealthLiveResponse:
+      type: object
+      required:
+        - success
+        - message
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Layanan aplikasi berjalan
+        data:
+          type: object
+          properties:
+            status:
+              type: string
+              example: up
+        meta:
+          type: object
+          nullable: true
+          example: null
+
+    HealthReadyResponse:
+      type: object
+      required:
+        - success
+        - message
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Layanan aplikasi siap menerima traffic
+        data:
+          type: object
+          properties:
+            status:
+              type: string
+              example: ready
+            checks:
+              type: object
+              properties:
+                http_server:
+                  type: string
+                  example: up
+        meta:
+          type: object
+          nullable: true
+          example: null
+
+    APIV1HealthResponse:
+      type: object
+      required:
+        - success
+        - message
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: EduCore API v1 operational
+        data:
+          type: object
+          properties:
+            version:
+              type: string
+              example: 1.0.0
+            environment:
+              type: string
+              example: development
+        meta:
+          type: object
+          nullable: true
+          example: null
+
+    ErrorDetail:
+      type: object
+      required:
+        - message
+      properties:
+        field:
+          type: string
+          example: email
+        message:
+          type: string
+          example: Format 'email' harus berupa alamat email yang valid
+
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - message
+        - error
+        - meta
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Validasi request gagal
+        error:
+          type: object
+          required:
+            - code
+            - details
+          properties:
+            code:
+              type: string
+              example: VALIDATION_ERROR
+            details:
+              type: array
+              items:
+                $ref: '#/components/schemas/ErrorDetail'
+        meta:
+          type: object
+          nullable: true
+          properties:
+            request_id:
+              type: string
+              example: 9f3c7e4a1b2d8e6f0c4a7b9e1d3f5a8b
