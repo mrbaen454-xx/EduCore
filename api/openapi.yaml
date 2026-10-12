@@ -4,8 +4,9 @@ info:
   description: >
     Fondasi REST API EduCore (SIAKAD) - Modular Monolith backend.
     Spesifikasi ini mencakup endpoint diagnostik, health check, Autentikasi dan Otorisasi (Fase 05),
-    serta Data Master Akademik: Fakultas, Program Studi, Dosen, dan Mahasiswa (Fase 06).
-  version: 1.2.0
+    Data Master Akademik: Fakultas, Program Studi, Dosen, dan Mahasiswa (Fase 06),
+    serta Mata Kuliah dan Kurikulum (Fase 07).
+  version: 1.3.0
 servers:
   - url: http://localhost:8080
     description: Lingkungan Development Lokal
@@ -930,6 +931,539 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/courses:
+    post:
+      summary: Membuat Mata Kuliah
+      operationId: createCourse
+      tags:
+        - Courses
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCourseRequest'
+      responses:
+        '201':
+          description: Mata kuliah berhasil dibuat
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    get:
+      summary: Menampilkan Daftar Mata Kuliah
+      operationId: listCourses
+      tags:
+        - Courses
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+        - name: credits
+          in: query
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: sort
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Daftar mata kuliah berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/courses/{id}:
+    get:
+      summary: Menampilkan Detail Mata Kuliah
+      operationId: getCourseDetail
+      tags:
+        - Courses
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detail mata kuliah berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      summary: Memperbarui Mata Kuliah
+      operationId: updateCourse
+      tags:
+        - Courses
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCourseRequest'
+      responses:
+        '200':
+          description: Mata kuliah berhasil diperbarui
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/courses/{id}/prerequisites:
+    post:
+      summary: Menambahkan Prasyarat Mata Kuliah
+      operationId: addCoursePrerequisite
+      tags:
+        - Courses
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddPrerequisiteRequest'
+      responses:
+        '201':
+          description: Prasyarat berhasil ditambahkan
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/courses/{id}/prerequisites/{prerequisiteId}:
+    delete:
+      summary: Menghapus Prasyarat Mata Kuliah
+      operationId: removeCoursePrerequisite
+      tags:
+        - Courses
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: prerequisiteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Prasyarat berhasil dihapus
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/curricula:
+    post:
+      summary: Membuat Kurikulum Program Studi
+      operationId: createCurriculum
+      tags:
+        - Curricula
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCurriculumRequest'
+      responses:
+        '201':
+          description: Kurikulum berhasil dibuat
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    get:
+      summary: Menampilkan Daftar Kurikulum
+      operationId: listCurricula
+      tags:
+        - Curricula
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: study_program_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [DRAFT, ACTIVE, INACTIVE, ARCHIVED]
+        - name: year
+          in: query
+          schema:
+            type: integer
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: sort
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Daftar kurikulum berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/curricula/{id}:
+    get:
+      summary: Menampilkan Detail Kurikulum Beserta Agregasi SKS
+      operationId: getCurriculumDetail
+      tags:
+        - Curricula
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detail kurikulum berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      summary: Memperbarui Metadata Kurikulum
+      operationId: updateCurriculum
+      tags:
+        - Curricula
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCurriculumRequest'
+      responses:
+        '200':
+          description: Kurikulum berhasil diperbarui
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/curricula/{id}/status:
+    patch:
+      summary: Mengubah Lifecycle Status Kurikulum
+      operationId: updateCurriculumStatus
+      tags:
+        - Curricula
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCurriculumStatusRequest'
+      responses:
+        '200':
+          description: Status kurikulum berhasil diperbarui
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/curricula/{id}/courses:
+    post:
+      summary: Menambahkan Mata Kuliah ke Kurikulum
+      operationId: addCourseToCurriculum
+      tags:
+        - Curricula
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCurriculumCourseRequest'
+      responses:
+        '201':
+          description: Mata kuliah berhasil ditambahkan ke kurikulum
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    get:
+      summary: Menampilkan Daftar Mata Kuliah dalam Kurikulum
+      operationId: listCurriculumCourses
+      tags:
+        - Curricula
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: semester
+          in: query
+          schema:
+            type: integer
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [REQUIRED, ELECTIVE]
+      responses:
+        '200':
+          description: Daftar mata kuliah kurikulum berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/curricula/{id}/courses/{courseId}:
+    patch:
+      summary: Memperbarui Semester Rekomendasi atau Kategori Mata Kuliah di Kurikulum
+      operationId: updateCurriculumCourse
+      tags:
+        - Curricula
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCurriculumCourseRequest'
+      responses:
+        '200':
+          description: Pengaturan mata kuliah di kurikulum berhasil diperbarui
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      summary: Menghapus Mata Kuliah dari Kurikulum
+      operationId: removeCourseFromCurriculum
+      tags:
+        - Curricula
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Mata kuliah berhasil dihapus dari kurikulum
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -1648,3 +2182,132 @@ components:
           type: string
           enum: [ACTIVE, INACTIVE, PROBATION, GRADUATED, DROPOUT, SUSPENDED]
           example: ACTIVE
+
+    CreateCourseRequest:
+      type: object
+      required:
+        - code
+        - name
+        - credits
+      properties:
+        code:
+          type: string
+          example: "TIF101"
+        name:
+          type: string
+          example: "Algoritma dan Pemrograman"
+        description:
+          type: string
+          nullable: true
+          example: "Pengantar logika pemrograman dan struktur kontrol"
+        credits:
+          type: integer
+          minimum: 1
+          maximum: 8
+          example: 3
+
+    UpdateCourseRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Algoritma dan Pemrograman Lanjut"
+        description:
+          type: string
+          nullable: true
+        credits:
+          type: integer
+          minimum: 1
+          maximum: 8
+        is_active:
+          type: boolean
+
+    AddPrerequisiteRequest:
+      type: object
+      required:
+        - prerequisite_course_id
+      properties:
+        prerequisite_course_id:
+          type: string
+          format: uuid
+          example: "8b0821ec-ec51-40be-bd3d-0453c07624c4"
+
+    CreateCurriculumRequest:
+      type: object
+      required:
+        - study_program_id
+        - code
+        - name
+        - year
+      properties:
+        study_program_id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          example: "KUR-IF-2024"
+        name:
+          type: string
+          example: "Kurikulum OBE Informatika 2024"
+        year:
+          type: integer
+          minimum: 1970
+          maximum: 2100
+          example: 2024
+        description:
+          type: string
+          nullable: true
+
+    UpdateCurriculumRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        year:
+          type: integer
+          minimum: 1970
+          maximum: 2100
+        description:
+          type: string
+          nullable: true
+
+    UpdateCurriculumStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [DRAFT, ACTIVE, INACTIVE, ARCHIVED]
+          example: ACTIVE
+
+    AddCurriculumCourseRequest:
+      type: object
+      required:
+        - course_id
+        - recommended_semester
+        - category
+      properties:
+        course_id:
+          type: string
+          format: uuid
+        recommended_semester:
+          type: integer
+          minimum: 1
+          maximum: 14
+          example: 1
+        category:
+          type: string
+          enum: [REQUIRED, ELECTIVE]
+          example: REQUIRED
+
+    UpdateCurriculumCourseRequest:
+      type: object
+      properties:
+        recommended_semester:
+          type: integer
+          minimum: 1
+          maximum: 14
+        category:
+          type: string
+          enum: [REQUIRED, ELECTIVE]

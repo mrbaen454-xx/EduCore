@@ -9,6 +9,8 @@ import (
 	"educore/internal/config"
 	"educore/internal/middleware"
 	"educore/internal/modules/auth"
+	"educore/internal/modules/courses"
+	"educore/internal/modules/curricula"
 	"educore/internal/modules/faculties"
 	"educore/internal/modules/lecturers"
 	"educore/internal/modules/students"
@@ -149,6 +151,18 @@ func New(cfg *config.Config, logger *slog.Logger, dbPool *pgxpool.Pool) *Server 
 			studService := students.NewService(studRepo, logger)
 			studHandler := students.NewHandler(studService, logger)
 			students.RegisterRoutes(v1, studHandler, authMiddleware, adminStaffMiddleware)
+
+			// Register Courses routes
+			courseRepo := courses.NewRepository(dbPool)
+			courseService := courses.NewService(courseRepo, logger)
+			courseHandler := courses.NewHandler(courseService, logger)
+			courses.RegisterRoutes(v1, courseHandler, authMiddleware, adminStaffMiddleware)
+
+			// Register Curricula routes
+			curriRepo := curricula.NewRepository(dbPool)
+			curriService := curricula.NewService(curriRepo, logger)
+			curriHandler := curricula.NewHandler(curriService, logger)
+			curricula.RegisterRoutes(v1, curriHandler, authMiddleware, adminStaffMiddleware)
 		}
 	}
 

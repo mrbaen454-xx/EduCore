@@ -200,6 +200,38 @@ curl -i -X POST http://localhost:8080/api/v1/students \
   -d '{"study_program_id":"<PRODI_ID>","nim":"2026101001","name":"Ananda Putri","email":"ananda@student.educore.ac.id","gender":"FEMALE","birth_date":"2004-08-20","admission_year":2026}'
 ```
 
+### H. Menambah Mata Kuliah
+```bash
+curl -i -X POST http://localhost:8080/api/v1/courses \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"code":"TIF101","name":"Algoritma dan Pemrograman","description":"Pengantar logika dan struktur kontrol","credits":3}'
+```
+
+### I. Menambah Prasyarat Mata Kuliah
+```bash
+curl -i -X POST http://localhost:8080/api/v1/courses/<COURSE_ID>/prerequisites \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"prerequisite_course_id":"<PREREQUISITE_COURSE_ID>"}'
+```
+
+### J. Membuat Kurikulum Program Studi
+```bash
+curl -i -X POST http://localhost:8080/api/v1/curricula \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"study_program_id":"<PRODI_ID>","code":"KUR-IF-2024","name":"Kurikulum OBE Informatika 2024","year":2024}'
+```
+
+### K. Menambahkan Mata Kuliah ke Kurikulum
+```bash
+curl -i -X POST http://localhost:8080/api/v1/curricula/<CURRICULUM_ID>/courses \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"course_id":"<COURSE_ID>","recommended_semester":1,"category":"REQUIRED"}'
+```
+
 ---
 
 ## 6. Pengujian dan Kualitas Kode
@@ -239,6 +271,11 @@ make db-version
 
 ## 7. Dokumentasi Lengkap Proyek
 
+- **Mata Kuliah dan Kurikulum (Fase 07)**:
+  - [Dokumentasi Basis Data Mata Kuliah & Kurikulum](file:///d:/share/SARONI/PROJECTS/EduCore/docs/database/courses-and-curricula.md)
+  - [Dokumentasi REST API Mata Kuliah & Kurikulum](file:///d:/share/SARONI/PROJECTS/EduCore/docs/api/courses-and-curricula.md)
+  - [Aturan Bisnis & Integritas SKS](file:///d:/share/SARONI/PROJECTS/EduCore/docs/business-rules/courses-and-curricula.md)
+  - [Laporan & Panduan Pengujian Fase 07](file:///d:/share/SARONI/PROJECTS/EduCore/docs/testing/fase-07-courses-and-curricula.md)
 - **Data Master Akademik (Fase 06)**:
   - [Dokumentasi Basis Data Data Master](file:///d:/share/SARONI/PROJECTS/EduCore/docs/database/data-master.md)
   - [Dokumentasi REST API Data Master](file:///d:/share/SARONI/PROJECTS/EduCore/docs/api/data-master.md)
@@ -271,5 +308,6 @@ make db-version
 - **Fase 04**: Database PostgreSQL, Connection Pool, Transaksi, Migrasi (Selesai)
 - **Fase 05**: Autentikasi & Otorisasi RBAC, Argon2id, JWT, Refresh Token Rotation (Selesai)
 - **Fase 06**: Data Master Akademik: Fakultas, Program Studi, Dosen, Mahasiswa (Selesai)
-- **Fase 07+**: Modul Operasional Akademik (Periode Akademik, Kurikulum, Mata Kuliah, Kelas Perkuliahan, KRS/IRS, Presensi, Penilaian, IP/IPK, Transkrip Akademik) *(Belum dimulai)*
+- **Fase 07**: Mata Kuliah & Kurikulum: Katalog Mata Kuliah, Prasyarat, Kurikulum, Agregasi SKS (Selesai)
+- **Fase 08+**: Modul Operasional Akademik (Periode Akademik, Kelas Perkuliahan, Jadwal, KRS/IRS, Presensi, Penilaian, IP/IPK, Transkrip Akademik) *(Belum dimulai)*
 

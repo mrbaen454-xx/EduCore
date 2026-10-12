@@ -30,7 +30,7 @@ func TestMigration_Lifecycle(t *testing.T) {
 		t.Fatalf("failed to run MigrateUp: %v", err)
 	}
 
-	// 2. Check Migration Version (now version 3 with academic master tables)
+	// 2. Check Migration Version (now version 4 with courses and curricula tables)
 	version, dirty, err := database.MigrationVersion(migrationsDir, cfg.DSN())
 	if err != nil {
 		t.Fatalf("failed to get migration version: %v", err)
@@ -38,12 +38,16 @@ func TestMigration_Lifecycle(t *testing.T) {
 	if dirty {
 		t.Errorf("migration state is dirty")
 	}
-	if version != 3 {
-		t.Errorf("expected migration version 3, got %d", version)
+	if version != 4 {
+		t.Errorf("expected migration version 4, got %d", version)
 	}
 
 	// 3. Verify all tables exist in PostgreSQL information_schema
-	tables := []string{"roles", "users", "user_roles", "refresh_tokens", "faculties", "study_programs", "lecturers", "students"}
+	tables := []string{
+		"roles", "users", "user_roles", "refresh_tokens",
+		"faculties", "study_programs", "lecturers", "students",
+		"courses", "curricula", "curriculum_courses", "course_prerequisites",
+	}
 	for _, table := range tables {
 		var exists bool
 		query := `SELECT EXISTS (
@@ -67,12 +71,12 @@ func TestMigration_Lifecycle(t *testing.T) {
 		t.Errorf("expected 4 baseline roles (admin, dosen, mahasiswa, akademik), got %d", roleCount)
 	}
 
-	// 5. Test MigrateDown (Rollback step 1: drop academic master tables)
+	// 5. Test MigrateDown (Rollback step 1: drop courses & curricula tables)
 	if err := database.MigrateDown(migrationsDir, cfg.DSN(), 1); err != nil {
 		t.Fatalf("failed to run MigrateDown step 1: %v", err)
 	}
 
-	for _, table := range []string{"students", "lecturers", "study_programs", "faculties"} {
+	for _, table := range []string{"course_prerequisites", "curriculum_courses", "curricula", "courses"} {
 		var exists bool
 		_ = db.Pool.QueryRow(ctx, "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema='public' AND table_name=$1);", table).Scan(&exists)
 		if exists {
@@ -80,20 +84,33 @@ func TestMigration_Lifecycle(t *testing.T) {
 		}
 	}
 
-	// 6. Rollback step 2: drop refresh_tokens
+	// 6. Rollback step 2: drop academic master tables
 	if err := database.MigrateDown(migrationsDir, cfg.DSN(), 1); err != nil {
 		t.Fatalf("failed to run MigrateDown step 2: %v", err)
+	}
+
+	for _, table := range []string{"students", "lecturers", "study_programs", "faculties"} {
+		var exists bool
+		_ = db.Pool.QueryRow(ctx, "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema='public' AND table_name=$1);", table).Scan(&exists)
+		if exists {
+			t.Errorf("expected table %s to be dropped after rollback step 2", table)
+		}
+	}
+
+	// 7. Rollback step 3: drop refresh_tokens
+	if err := database.MigrateDown(migrationsDir, cfg.DSN(), 1); err != nil {
+		t.Fatalf("failed to run MigrateDown step 3: %v", err)
 	}
 
 	var rtExists bool
 	_ = db.Pool.QueryRow(ctx, "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema='public' AND table_name='refresh_tokens');").Scan(&rtExists)
 	if rtExists {
-		t.Errorf("expected refresh_tokens to be dropped after rollback step 2")
+		t.Errorf("expected refresh_tokens to be dropped after rollback step 3")
 	}
 
-	// 7. Rollback step 3: drop initial schema
+	// 8. Rollback step 4: drop initial schema
 	if err := database.MigrateDown(migrationsDir, cfg.DSN(), 1); err != nil {
-		t.Fatalf("failed to run MigrateDown step 3: %v", err)
+		t.Fatalf("failed to run MigrateDown step 4: %v", err)
 	}
 
 	for _, table := range []string{"roles", "users", "user_roles"} {
@@ -110,7 +127,7 @@ func TestMigration_Lifecycle(t *testing.T) {
 		}
 	}
 
-	// 8. Re-apply MigrateUp to leave schema active for subsequent tests
+	// 9. Re-apply MigrateUp to leave schema active for subsequent tests
 	if err := database.MigrateUp(migrationsDir, cfg.DSN()); err != nil {
 		t.Fatalf("failed to re-apply MigrateUp: %v", err)
 	}
