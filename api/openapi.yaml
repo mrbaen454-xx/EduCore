@@ -3,8 +3,9 @@ info:
   title: EduCore Academic Management System API
   description: >
     Fondasi REST API EduCore (SIAKAD) - Modular Monolith backend.
-    Spesifikasi ini mencakup endpoint diagnostik, health check, serta Autentikasi dan Otorisasi (Fase 05).
-  version: 1.1.0
+    Spesifikasi ini mencakup endpoint diagnostik, health check, Autentikasi dan Otorisasi (Fase 05),
+    serta Data Master Akademik: Fakultas, Program Studi, Dosen, dan Mahasiswa (Fase 06).
+  version: 1.2.0
 servers:
   - url: http://localhost:8080
     description: Lingkungan Development Lokal
@@ -194,6 +195,741 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/faculties:
+    post:
+      summary: Membuat Fakultas Baru
+      description: Menambahkan fakultas baru ke sistem. Memerlukan role admin atau akademik.
+      operationId: createFaculty
+      tags:
+        - Faculties
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFacultyRequest'
+      responses:
+        '201':
+          description: Fakultas berhasil dibuat
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    get:
+      summary: Mendapatkan Daftar Fakultas
+      description: Menampilkan daftar fakultas dengan filter, pagination, dan sorting.
+      operationId: listFaculties
+      tags:
+        - Faculties
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: search
+          in: query
+          description: Pencarian nama atau kode fakultas
+          schema:
+            type: string
+        - name: is_active
+          in: query
+          description: Filter status aktif
+          schema:
+            type: boolean
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [name, code, created_at]
+            default: created_at
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Daftar fakultas berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/faculties/{id}:
+    get:
+      summary: Mendapatkan Detail Fakultas
+      description: Menampilkan detail fakultas berdasarkan ID beserta jumlah program studi terdaftar.
+      operationId: getFacultyDetail
+      tags:
+        - Faculties
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detail fakultas berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      summary: Memperbarui Data Fakultas
+      description: Memperbarui informasi nama dan deskripsi fakultas.
+      operationId: updateFaculty
+      tags:
+        - Faculties
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateFacultyRequest'
+      responses:
+        '200':
+          description: Fakultas berhasil diperbarui
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/faculties/{id}/status:
+    patch:
+      summary: Mengubah Status Aktif Fakultas
+      description: Mengaktifkan atau menonaktifkan status operasional fakultas.
+      operationId: updateFacultyStatus
+      tags:
+        - Faculties
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStatusRequest'
+      responses:
+        '200':
+          description: Status fakultas berhasil diperbarui
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/study-programs:
+    post:
+      summary: Membuat Program Studi Baru
+      description: Mendaftarkan program studi di bawah naungan fakultas aktif.
+      operationId: createStudyProgram
+      tags:
+        - Study Programs
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStudyProgramRequest'
+      responses:
+        '201':
+          description: Program studi berhasil dibuat
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    get:
+      summary: Mendapatkan Daftar Program Studi
+      description: Menampilkan daftar prodi dengan filter fakultas, jenjang, dan status aktif.
+      operationId: listStudyPrograms
+      tags:
+        - Study Programs
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: faculty_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: level
+          in: query
+          schema:
+            type: string
+            enum: [D3, D4, S1, S2, S3, Profesi]
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [name, code, level, created_at]
+            default: created_at
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Daftar prodi berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/study-programs/{id}:
+    get:
+      summary: Mendapatkan Detail Program Studi
+      operationId: getStudyProgramDetail
+      tags:
+        - Study Programs
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detail program studi berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      summary: Memperbarui Program Studi
+      operationId: updateStudyProgram
+      tags:
+        - Study Programs
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStudyProgramRequest'
+      responses:
+        '200':
+          description: Program studi berhasil diperbarui
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/study-programs/{id}/status:
+    patch:
+      summary: Mengubah Status Aktif Program Studi
+      operationId: updateStudyProgramStatus
+      tags:
+        - Study Programs
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStatusRequest'
+      responses:
+        '200':
+          description: Status prodi berhasil diperbarui
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/lecturers:
+    post:
+      summary: Mendaftarkan Profil Dosen
+      operationId: createLecturer
+      tags:
+        - Lecturers
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLecturerRequest'
+      responses:
+        '201':
+          description: Dosen berhasil didaftarkan
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    get:
+      summary: Mendapatkan Daftar Dosen
+      operationId: listLecturers
+      tags:
+        - Lecturers
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: study_program_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ACTIVE, INACTIVE, LEAVE]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [name, nidn, email, created_at]
+            default: created_at
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Daftar dosen berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/lecturers/{id}:
+    get:
+      summary: Mendapatkan Detail Dosen
+      operationId: getLecturerDetail
+      tags:
+        - Lecturers
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detail dosen berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      summary: Memperbarui Profil Dosen
+      operationId: updateLecturer
+      tags:
+        - Lecturers
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLecturerRequest'
+      responses:
+        '200':
+          description: Profil dosen berhasil diperbarui
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/lecturers/{id}/status:
+    patch:
+      summary: Mengubah Status Kepegawaian Dosen
+      operationId: updateLecturerStatus
+      tags:
+        - Lecturers
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLecturerStatusRequest'
+      responses:
+        '200':
+          description: Status dosen berhasil diperbarui
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/students:
+    post:
+      summary: Mendaftarkan Profil Mahasiswa
+      operationId: createStudent
+      tags:
+        - Students
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStudentRequest'
+      responses:
+        '201':
+          description: Mahasiswa berhasil didaftarkan
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    get:
+      summary: Mendapatkan Daftar Mahasiswa
+      operationId: listStudents
+      tags:
+        - Students
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: study_program_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: admission_year
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ACTIVE, INACTIVE, PROBATION, GRADUATED, DROPOUT, SUSPENDED]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [name, nim, email, admission_year, created_at]
+            default: created_at
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Daftar mahasiswa berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/students/{id}:
+    get:
+      summary: Mendapatkan Detail Mahasiswa
+      operationId: getStudentDetail
+      tags:
+        - Students
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detail mahasiswa berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      summary: Memperbarui Biodata Mahasiswa
+      operationId: updateStudent
+      tags:
+        - Students
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStudentRequest'
+      responses:
+        '200':
+          description: Mahasiswa berhasil diperbarui
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/students/{id}/status:
+    patch:
+      summary: Mengubah Status Akademik Mahasiswa
+      operationId: updateStudentStatus
+      tags:
+        - Students
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStudentStatusRequest'
+      responses:
+        '200':
+          description: Status mahasiswa berhasil diperbarui
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -345,6 +1081,24 @@ components:
             message: Terjadi kesalahan internal pada server
             error:
               code: INTERNAL_ERROR
+              details: []
+            meta:
+              request_id: 9f3c7e4a1b2d8e6f0c4a7b9e1d3f5a8b
+
+    ConflictError:
+      description: Terjadi konflik data atau duplikasi constraint unik
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/XRequestID'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: Data dengan kode tersebut sudah digunakan
+            error:
+              code: CONFLICT
               details: []
             meta:
               request_id: 9f3c7e4a1b2d8e6f0c4a7b9e1d3f5a8b
@@ -660,3 +1414,237 @@ components:
             request_id:
               type: string
               example: 9f3c7e4a1b2d8e6f0c4a7b9e1d3f5a8b
+
+    CreateFacultyRequest:
+      type: object
+      required:
+        - code
+        - name
+      properties:
+        code:
+          type: string
+          minLength: 2
+          maxLength: 20
+          example: FT
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: Fakultas Teknik
+        description:
+          type: string
+          nullable: true
+          example: Fakultas teknik dan rekayasa
+
+    UpdateFacultyRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+
+    UpdateStatusRequest:
+      type: object
+      required:
+        - is_active
+      properties:
+        is_active:
+          type: boolean
+          example: true
+
+    CreateStudyProgramRequest:
+      type: object
+      required:
+        - faculty_id
+        - code
+        - name
+        - level
+      properties:
+        faculty_id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          minLength: 2
+          maxLength: 20
+          example: TIF
+        name:
+          type: string
+          maxLength: 255
+          example: Teknik Informatika
+        level:
+          type: string
+          enum: [D3, D4, S1, S2, S3, Profesi]
+          example: S1
+        description:
+          type: string
+          nullable: true
+
+    UpdateStudyProgramRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        level:
+          type: string
+          enum: [D3, D4, S1, S2, S3, Profesi]
+        description:
+          type: string
+          nullable: true
+
+    CreateLecturerRequest:
+      type: object
+      required:
+        - study_program_id
+        - nidn
+        - name
+        - email
+      properties:
+        study_program_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+          nullable: true
+        nidn:
+          type: string
+          example: "0012345678"
+        name:
+          type: string
+          example: Joko Susilo
+        title_prefix:
+          type: string
+          nullable: true
+          example: Prof. Dr. Ir.
+        title_suffix:
+          type: string
+          nullable: true
+          example: M.T.
+        email:
+          type: string
+          format: email
+          example: joko@educore.ac.id
+        phone:
+          type: string
+          nullable: true
+          example: "081234567890"
+
+    UpdateLecturerRequest:
+      type: object
+      properties:
+        study_program_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+        title_prefix:
+          type: string
+          nullable: true
+        title_suffix:
+          type: string
+          nullable: true
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          nullable: true
+
+    UpdateLecturerStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE, LEAVE]
+          example: ACTIVE
+
+    CreateStudentRequest:
+      type: object
+      required:
+        - study_program_id
+        - nim
+        - name
+        - email
+        - admission_year
+      properties:
+        study_program_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+          nullable: true
+        nim:
+          type: string
+          example: "2026101001"
+        name:
+          type: string
+          example: Ananda Putri
+        email:
+          type: string
+          format: email
+          example: ananda@student.educore.ac.id
+        phone:
+          type: string
+          nullable: true
+        gender:
+          type: string
+          enum: [MALE, FEMALE]
+          nullable: true
+        birth_date:
+          type: string
+          format: date
+          nullable: true
+          example: "2004-08-20"
+        admission_year:
+          type: integer
+          example: 2026
+
+    UpdateStudentRequest:
+      type: object
+      properties:
+        study_program_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          nullable: true
+        gender:
+          type: string
+          enum: [MALE, FEMALE]
+          nullable: true
+        birth_date:
+          type: string
+          format: date
+          nullable: true
+        admission_year:
+          type: integer
+
+    UpdateStudentStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE, PROBATION, GRADUATED, DROPOUT, SUSPENDED]
+          example: ACTIVE

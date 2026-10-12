@@ -9,6 +9,10 @@ import (
 	"educore/internal/config"
 	"educore/internal/middleware"
 	"educore/internal/modules/auth"
+	"educore/internal/modules/faculties"
+	"educore/internal/modules/lecturers"
+	"educore/internal/modules/students"
+	"educore/internal/modules/study_programs"
 	"educore/internal/platform/database"
 	appErrors "educore/internal/shared/errors"
 	"educore/internal/shared/response"
@@ -118,8 +122,33 @@ func New(cfg *config.Config, logger *slog.Logger, dbPool *pgxpool.Pool) *Server 
 
 			authMiddleware := middleware.Authenticate(tokenMgr)
 			adminMiddleware := middleware.RequireRoles("admin")
+			adminStaffMiddleware := middleware.RequireRoles("admin", "akademik")
 
 			auth.RegisterRoutes(v1, handler, authMiddleware, adminMiddleware)
+
+			// Register Faculties routes
+			facRepo := faculties.NewRepository(dbPool)
+			facService := faculties.NewService(facRepo, logger)
+			facHandler := faculties.NewHandler(facService, logger)
+			faculties.RegisterRoutes(v1, facHandler, authMiddleware, adminStaffMiddleware)
+
+			// Register Study Programs routes
+			spRepo := study_programs.NewRepository(dbPool)
+			spService := study_programs.NewService(spRepo, logger)
+			spHandler := study_programs.NewHandler(spService, logger)
+			study_programs.RegisterRoutes(v1, spHandler, authMiddleware, adminStaffMiddleware)
+
+			// Register Lecturers routes
+			lecRepo := lecturers.NewRepository(dbPool)
+			lecService := lecturers.NewService(lecRepo, logger)
+			lecHandler := lecturers.NewHandler(lecService, logger)
+			lecturers.RegisterRoutes(v1, lecHandler, authMiddleware, adminStaffMiddleware)
+
+			// Register Students routes
+			studRepo := students.NewRepository(dbPool)
+			studService := students.NewService(studRepo, logger)
+			studHandler := students.NewHandler(studService, logger)
+			students.RegisterRoutes(v1, studHandler, authMiddleware, adminStaffMiddleware)
 		}
 	}
 
@@ -142,6 +171,11 @@ func New(cfg *config.Config, logger *slog.Logger, dbPool *pgxpool.Pool) *Server 
 
 // Router returns the Gin engine instance, useful for integration testing.
 func (s *Server) Router() *gin.Engine {
+	return s.engine
+}
+
+// Engine returns the underlying Gin engine instance.
+func (s *Server) Engine() *gin.Engine {
 	return s.engine
 }
 

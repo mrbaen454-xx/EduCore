@@ -119,7 +119,33 @@ Server akan mendengarkan request HTTP di port `8080` (sesuai konfigurasi `APP_PO
 - `POST /api/v1/auth/refresh`: Memperbarui Access Token dengan mekanisme rotasi Refresh Token otomatis.
 - `POST /api/v1/auth/logout`: Mencabut refresh token aktif untuk mengakhiri sesi pengguna.
 - `GET /api/v1/users/me`: Mengambil profil dan roles pengguna yang sedang login (membutuhkan header `Authorization: Bearer <token>`).
-- `GET /api/v1/test/admin-only`: Endpoint pengujian otorisasi RBAC (hanya dapat diakses oleh role `ADMIN`).
+- `GET /api/v1/test/admin-only`: Endpoint pengujian otorisasi RBAC (hanya dapat diakses oleh role `admin`).
+
+### 4.3 Data Master Akademik (Fase 06)
+- **Fakultas**:
+  - `POST /api/v1/faculties`: Menambah fakultas baru (`admin`, `akademik`).
+  - `GET /api/v1/faculties`: Daftar fakultas terpaginasi dengan pencarian & filter status.
+  - `GET /api/v1/faculties/:id`: Detail fakultas beserta agregasi jumlah prodi.
+  - `PATCH /api/v1/faculties/:id`: Memperbarui data fakultas (`admin`, `akademik`).
+  - `PATCH /api/v1/faculties/:id/status`: Mengubah status aktif fakultas (`admin`, `akademik`).
+- **Program Studi**:
+  - `POST /api/v1/study-programs`: Menambah prodi di bawah fakultas aktif (`admin`, `akademik`).
+  - `GET /api/v1/study-programs`: Daftar prodi dengan filter fakultas, jenjang, dan status.
+  - `GET /api/v1/study-programs/:id`: Detail prodi beserta data fakultas induk.
+  - `PATCH /api/v1/study-programs/:id`: Memperbarui prodi (`admin`, `akademik`).
+  - `PATCH /api/v1/study-programs/:id/status`: Mengubah status aktif prodi (`admin`, `akademik`).
+- **Dosen**:
+  - `POST /api/v1/lecturers`: Mendaftarkan profil dosen baru (`admin`, `akademik`).
+  - `GET /api/v1/lecturers`: Daftar dosen dengan filter prodi, status kepegawaian.
+  - `GET /api/v1/lecturers/:id`: Detail profil dosen lengkap.
+  - `PATCH /api/v1/lecturers/:id`: Memperbarui biodata dosen (`admin`, `akademik`).
+  - `PATCH /api/v1/lecturers/:id/status`: Mengubah status dosen (`ACTIVE`, `INACTIVE`, `LEAVE`).
+- **Mahasiswa**:
+  - `POST /api/v1/students`: Mendaftarkan profil mahasiswa (`admin`, `akademik`).
+  - `GET /api/v1/students`: Daftar mahasiswa dengan filter prodi, angkatan, status.
+  - `GET /api/v1/students/:id`: Detail mahasiswa lengkap.
+  - `PATCH /api/v1/students/:id`: Memperbarui biodata mahasiswa (`admin`, `akademik`).
+  - `PATCH /api/v1/students/:id/status`: Mengubah status akademik mahasiswa (`ACTIVE`, `INACTIVE`, `PROBATION`, `GRADUATED`, `DROPOUT`, `SUSPENDED`).
 
 ---
 
@@ -142,24 +168,36 @@ curl -i -X POST http://localhost:8080/api/v1/auth/login \
   -d '{"identifier":"admin@educore.ac.id","password":"YourSecurePassword"}'
 ```
 
-### D. Mengakses Profil Pengguna Terautentikasi
+### D. Menambah Fakultas Baru
 ```bash
-curl -i http://localhost:8080/api/v1/users/me \
-  -H "Authorization: Bearer <ACCESS_TOKEN>"
+curl -i -X POST http://localhost:8080/api/v1/faculties \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"code":"FT","name":"Fakultas Teknik","description":"Fakultas Teknik dan Rekayasa"}'
 ```
 
-### E. Merotasi Refresh Token
+### E. Menambah Program Studi
 ```bash
-curl -i -X POST http://localhost:8080/api/v1/auth/refresh \
+curl -i -X POST http://localhost:8080/api/v1/study-programs \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
   -H "Content-Type: application/json" \
-  -d '{"refresh_token":"<REFRESH_TOKEN>"}'
+  -d '{"faculty_id":"<FACULTY_ID>","code":"TIF","name":"Teknik Informatika","level":"S1"}'
 ```
 
-### F. Logout / Pencabutan Sesi
+### F. Mendaftarkan Dosen
 ```bash
-curl -i -X POST http://localhost:8080/api/v1/auth/logout \
+curl -i -X POST http://localhost:8080/api/v1/lecturers \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
   -H "Content-Type: application/json" \
-  -d '{"refresh_token":"<REFRESH_TOKEN>"}'
+  -d '{"study_program_id":"<PRODI_ID>","nidn":"0012345678","name":"Joko Susilo","title_prefix":"Prof. Dr. Ir.","title_suffix":"M.T.","email":"joko@educore.ac.id"}'
+```
+
+### G. Mendaftarkan Mahasiswa
+```bash
+curl -i -X POST http://localhost:8080/api/v1/students \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"study_program_id":"<PRODI_ID>","nim":"2026101001","name":"Ananda Putri","email":"ananda@student.educore.ac.id","gender":"FEMALE","birth_date":"2004-08-20","admission_year":2026}'
 ```
 
 ---
@@ -201,6 +239,11 @@ make db-version
 
 ## 7. Dokumentasi Lengkap Proyek
 
+- **Data Master Akademik (Fase 06)**:
+  - [Dokumentasi Basis Data Data Master](file:///d:/share/SARONI/PROJECTS/EduCore/docs/database/data-master.md)
+  - [Dokumentasi REST API Data Master](file:///d:/share/SARONI/PROJECTS/EduCore/docs/api/data-master.md)
+  - [Aturan Bisnis & Integritas Akademik](file:///d:/share/SARONI/PROJECTS/EduCore/docs/business-rules/data-master.md)
+  - [Laporan & Panduan Pengujian Data Master](file:///d:/share/SARONI/PROJECTS/EduCore/docs/testing/fase-06-data-master.md)
 - **Keamanan & Autentikasi (Fase 05)**:
   - [Dokumentasi Autentikasi](file:///d:/share/SARONI/PROJECTS/EduCore/docs/security/authentication.md)
   - [Dokumentasi Otorisasi & RBAC](file:///d:/share/SARONI/PROJECTS/EduCore/docs/security/authorization.md)
@@ -227,4 +270,6 @@ make db-version
 - **Fase 03**: Fondasi REST API, Middleware, Error Handling, Routing (Selesai)
 - **Fase 04**: Database PostgreSQL, Connection Pool, Transaksi, Migrasi (Selesai)
 - **Fase 05**: Autentikasi & Otorisasi RBAC, Argon2id, JWT, Refresh Token Rotation (Selesai)
-- **Fase 06+**: Modul Bisnis Akademik (Fakultas, Prodi, Mahasiswa, Dosen, Kurikulum, KRS/IRS, Jadwal, Presensi, Penilaian, IP/IPK, Transkrip) *(Belum dimulai)*
+- **Fase 06**: Data Master Akademik: Fakultas, Program Studi, Dosen, Mahasiswa (Selesai)
+- **Fase 07+**: Modul Operasional Akademik (Periode Akademik, Kurikulum, Mata Kuliah, Kelas Perkuliahan, KRS/IRS, Presensi, Penilaian, IP/IPK, Transkrip Akademik) *(Belum dimulai)*
+
