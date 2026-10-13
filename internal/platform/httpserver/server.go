@@ -9,6 +9,7 @@ import (
 	"educore/internal/config"
 	"educore/internal/middleware"
 	"educore/internal/modules/academic_periods"
+	"educore/internal/modules/attendance"
 	"educore/internal/modules/auth"
 	"educore/internal/modules/classes"
 	"educore/internal/modules/course_offerings"
@@ -192,6 +193,14 @@ func New(cfg *config.Config, logger *slog.Logger, dbPool *pgxpool.Pool) *Server 
 			studyPlanService := study_plans.NewService(studyPlanRepo, logger)
 			studyPlanHandler := study_plans.NewHandler(studyPlanService)
 			study_plans.RegisterRoutes(v1, studyPlanHandler, authMiddleware, studentMiddleware, adminStaffMiddleware)
+
+			// Register Attendance and Class Sessions routes (Fase 10)
+			teachingStaffMiddleware := middleware.RequireRoles("dosen", "admin", "akademik")
+			academicUserMiddleware := middleware.RequireRoles("dosen", "admin", "akademik", "mahasiswa")
+			attendanceRepo := attendance.NewRepository(dbPool)
+			attendanceService := attendance.NewService(attendanceRepo, logger)
+			attendanceHandler := attendance.NewHandler(attendanceService)
+			attendance.RegisterRoutes(v1, attendanceHandler, authMiddleware, academicUserMiddleware, teachingStaffMiddleware, studentMiddleware)
 		}
 	}
 

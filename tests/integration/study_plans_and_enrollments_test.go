@@ -57,6 +57,8 @@ func setupStudyPlansTestApp(t *testing.T) *studyPlansTestHarness {
 	tokenMgr := auth.NewTokenManager(cfg)
 
 	// Clean tables in reverse dependency order
+	_, _ = db.Pool.Exec(ctx, "DELETE FROM attendances;")
+	_, _ = db.Pool.Exec(ctx, "DELETE FROM class_sessions;")
 	_, _ = db.Pool.Exec(ctx, "DELETE FROM enrollments;")
 	_, _ = db.Pool.Exec(ctx, "DELETE FROM study_plans;")
 	_, _ = db.Pool.Exec(ctx, "DELETE FROM class_schedules;")

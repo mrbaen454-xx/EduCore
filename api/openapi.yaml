@@ -7,8 +7,9 @@ info:
     Data Master Akademik: Fakultas, Program Studi, Dosen, dan Mahasiswa (Fase 06),
     Mata Kuliah dan Kurikulum (Fase 07),
     Penawaran Kelas dan Jadwal Perkuliahan (Fase 08),
-    serta KRS (Kartu Rencana Studi) dan Registrasi Mahasiswa (Fase 09).
-  version: 1.5.0
+    serta KRS (Kartu Rencana Studi) dan Registrasi Mahasiswa (Fase 09),
+    serta Presensi dan Kehadiran Mahasiswa (Fase 10).
+  version: 1.6.0
 servers:
   - url: http://localhost:8080
     description: Lingkungan Development Lokal
@@ -2630,6 +2631,404 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/classes/{id}/sessions:
+    get:
+      summary: Melihat daftar sesi perkuliahan kelas
+      operationId: listClassSessions
+      tags:
+        - Presensi
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Daftar sesi perkuliahan berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      summary: Membuat sesi perkuliahan baru
+      operationId: createClassSession
+      tags:
+        - Presensi
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
+      responses:
+        '201':
+          description: Sesi perkuliahan berhasil dibuat
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/classes/{id}/attendance/summary:
+    get:
+      summary: Melihat rekapitulasi kehadiran kelas
+      operationId: getClassAttendanceSummary
+      tags:
+        - Presensi
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Rekapitulasi kehadiran kelas berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/sessions/{id}:
+    get:
+      summary: Melihat detail sesi perkuliahan
+      operationId: getSessionDetail
+      tags:
+        - Presensi
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detail sesi perkuliahan berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      summary: Memperbarui metadata sesi perkuliahan
+      operationId: updateClassSession
+      tags:
+        - Presensi
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSessionRequest'
+      responses:
+        '200':
+          description: Sesi perkuliahan berhasil diperbarui
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/sessions/{id}/close:
+    post:
+      summary: Menutup sesi perkuliahan
+      operationId: closeClassSession
+      tags:
+        - Presensi
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Sesi perkuliahan berhasil ditutup
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/sessions/{id}/students:
+    get:
+      summary: Melihat daftar mahasiswa peserta sesi (roster)
+      operationId: getSessionStudents
+      tags:
+        - Presensi
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Daftar peserta sesi berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/sessions/{id}/attendance:
+    get:
+      summary: Melihat data presensi pada sesi perkuliahan
+      operationId: getSessionAttendance
+      tags:
+        - Presensi
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Data presensi sesi berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      summary: Mencatat presensi mahasiswa batch
+      operationId: recordBatchAttendance
+      tags:
+        - Presensi
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordBatchAttendanceRequest'
+      responses:
+        '200':
+          description: Presensi mahasiswa berhasil dicatat
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/sessions/{id}/attendance/{attendanceId}:
+    patch:
+      summary: Mengoreksi catatan presensi mahasiswa individual
+      operationId: updateAttendanceRecord
+      tags:
+        - Presensi
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: attendanceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAttendanceRequest'
+      responses:
+        '200':
+          description: Catatan presensi berhasil diperbarui
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/student/attendance:
+    get:
+      summary: Melihat riwayat presensi pribadi mahasiswa
+      operationId: getStudentAttendanceHistory
+      tags:
+        - Mahasiswa Presensi
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Riwayat presensi berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/student/attendance/classes/{id}:
+    get:
+      summary: Melihat riwayat presensi pribadi mahasiswa pada kelas tertentu
+      operationId: getStudentClassAttendanceHistory
+      tags:
+        - Mahasiswa Presensi
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Riwayat presensi kelas berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -3834,3 +4233,243 @@ components:
         study_program_name:
           type: string
           example: "Informatika"
+
+    CreateSessionRequest:
+      type: object
+      required:
+        - session_number
+        - date
+        - start_time
+        - end_time
+        - topic
+      properties:
+        session_number:
+          type: integer
+          minimum: 1
+          example: 1
+        date:
+          type: string
+          format: date
+          example: "2026-10-15"
+        start_time:
+          type: string
+          example: "08:00"
+        end_time:
+          type: string
+          example: "09:40"
+        topic:
+          type: string
+          example: "Pengantar Algoritma dan Kompleksitas"
+        remarks:
+          type: string
+          nullable: true
+          example: "Membawa laptop masing-masing"
+        lecturer_id:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          type: string
+          enum: [SCHEDULED, OPEN]
+          default: OPEN
+          example: "OPEN"
+
+    UpdateSessionRequest:
+      type: object
+      properties:
+        session_number:
+          type: integer
+          minimum: 1
+          example: 1
+        date:
+          type: string
+          format: date
+          example: "2026-10-15"
+        start_time:
+          type: string
+          example: "08:00"
+        end_time:
+          type: string
+          example: "09:40"
+        topic:
+          type: string
+          example: "Pengantar Algoritma Lanjutan"
+        remarks:
+          type: string
+          nullable: true
+        lecturer_id:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          type: string
+          enum: [SCHEDULED, OPEN, COMPLETED, CANCELLED]
+          example: "COMPLETED"
+
+    AttendanceItem:
+      type: object
+      required:
+        - student_id
+        - status
+      properties:
+        student_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [PRESENT, LATE, EXCUSED, SICK, ABSENT]
+          example: "PRESENT"
+        remarks:
+          type: string
+          nullable: true
+          example: "Hadir tepat waktu"
+
+    RecordBatchAttendanceRequest:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttendanceItem'
+
+    UpdateAttendanceRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [PRESENT, LATE, EXCUSED, SICK, ABSENT]
+          example: "SICK"
+        remarks:
+          type: string
+          nullable: true
+          example: "Surat sakit terlampir"
+
+    AttendanceSummary:
+      type: object
+      properties:
+        total_enrolled:
+          type: integer
+          example: 30
+        total_recorded:
+          type: integer
+          example: 28
+        present:
+          type: integer
+          example: 25
+        late:
+          type: integer
+          example: 2
+        excused:
+          type: integer
+          example: 1
+        sick:
+          type: integer
+          example: 0
+        absent:
+          type: integer
+          example: 0
+
+    SessionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        class_id:
+          type: string
+          format: uuid
+        class_code:
+          type: string
+          example: "IF101-A"
+        class_name:
+          type: string
+          example: "Pemrograman Dasar A"
+        course_code:
+          type: string
+          example: "IF101"
+        course_name:
+          type: string
+          example: "Pemrograman Dasar"
+        session_number:
+          type: integer
+          example: 1
+        date:
+          type: string
+          example: "2026-10-15"
+        start_time:
+          type: string
+          example: "08:00:00"
+        end_time:
+          type: string
+          example: "09:40:00"
+        topic:
+          type: string
+          example: "Pengantar Algoritma"
+        remarks:
+          type: string
+          nullable: true
+        lecturer_id:
+          type: string
+          format: uuid
+          nullable: true
+        lecturer_name:
+          type: string
+          nullable: true
+          example: "Dr. Budi Santoso"
+        status:
+          type: string
+          example: "OPEN"
+        attendance_summary:
+          $ref: '#/components/schemas/AttendanceSummary'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AttendanceDetailResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        session_id:
+          type: string
+          format: uuid
+        student_id:
+          type: string
+          format: uuid
+        student_nim:
+          type: string
+          example: "2024001"
+        student_name:
+          type: string
+          example: "Budi Pratama"
+        enrollment_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [PRESENT, LATE, EXCUSED, SICK, ABSENT]
+          example: "PRESENT"
+        remarks:
+          type: string
+          nullable: true
+        recorded_by_name:
+          type: string
+          nullable: true
+          example: "Dr. Budi Santoso"
+        recorded_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time

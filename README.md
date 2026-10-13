@@ -300,6 +300,80 @@ curl -i -X DELETE http://localhost:8080/api/v1/student/study-plans/<STUDY_PLAN_I
   -H "Authorization: Bearer <STUDENT_ACCESS_TOKEN>"
 ```
 
+### 5.8 Contoh Penggunaan API Presensi Mahasiswa (Fase 10)
+
+#### 1. Dosen Membuat Sesi Perkuliahan
+```bash
+curl -i -X POST http://localhost:8080/api/v1/classes/<CLASS_ID>/sessions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <LECTURER_ACCESS_TOKEN>" \
+  -d '{
+    "session_number": 1,
+    "date": "2026-10-15",
+    "start_time": "08:00",
+    "end_time": "09:40",
+    "topic": "Pengantar Algoritma dan Struktur Data",
+    "remarks": "Membawa laptop untuk live coding",
+    "status": "OPEN"
+  }'
+```
+
+#### 2. Dosen Melihat Roster Peserta Sesi
+```bash
+curl -i -X GET http://localhost:8080/api/v1/sessions/<SESSION_ID>/students \
+  -H "Authorization: Bearer <LECTURER_ACCESS_TOKEN>"
+```
+
+#### 3. Dosen Mencatat Presensi Mahasiswa Secara Batch
+```bash
+curl -i -X POST http://localhost:8080/api/v1/sessions/<SESSION_ID>/attendance \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <LECTURER_ACCESS_TOKEN>" \
+  -d '{
+    "items": [
+      {
+        "student_id": "<STUDENT_1_ID>",
+        "status": "PRESENT",
+        "remarks": "Hadir tepat waktu"
+      },
+      {
+        "student_id": "<STUDENT_2_ID>",
+        "status": "LATE",
+        "remarks": "Terlambat 10 menit"
+      }
+    ]
+  }'
+```
+
+#### 4. Dosen Mengoreksi Presensi Mahasiswa
+```bash
+curl -i -X PATCH http://localhost:8080/api/v1/sessions/<SESSION_ID>/attendance/<ATTENDANCE_ID> \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <LECTURER_ACCESS_TOKEN>" \
+  -d '{
+    "status": "SICK",
+    "remarks": "Kirim surat dokter resmi"
+  }'
+```
+
+#### 5. Dosen Menutup Sesi Perkuliahan
+```bash
+curl -i -X POST http://localhost:8080/api/v1/sessions/<SESSION_ID>/close \
+  -H "Authorization: Bearer <LECTURER_ACCESS_TOKEN>"
+```
+
+#### 6. Mahasiswa Melihat Riwayat Presensi Pribadi
+```bash
+curl -i -X GET http://localhost:8080/api/v1/student/attendance \
+  -H "Authorization: Bearer <STUDENT_ACCESS_TOKEN>"
+```
+
+#### 7. Dosen / Staf Melihat Rekapitulasi Kehadiran Kelas
+```bash
+curl -i -X GET http://localhost:8080/api/v1/classes/<CLASS_ID>/attendance/summary \
+  -H "Authorization: Bearer <LECTURER_OR_STAFF_TOKEN>"
+```
+
 ---
 
 ## 6. Pengujian dan Kualitas Kode
@@ -339,42 +413,47 @@ make db-version
 
 ## 7. Dokumentasi Lengkap Proyek
 
+- **Presensi dan Kehadiran Mahasiswa (Fase 10)**:
+  - [Dokumentasi Basis Data Presensi](docs/database/attendance.md)
+  - [Dokumentasi REST API Presensi](docs/api/attendance.md)
+  - [Aturan Bisnis & Integritas Presensi](docs/business-rules/attendance.md)
+  - [Laporan & Panduan Pengujian Fase 10](docs/testing/fase-10-attendance.md)
 - **KRS dan Registrasi Mahasiswa (Fase 09)**:
-  - [Dokumentasi Basis Data KRS & Registrasi](file:///d:/share/SARONI/PROJECTS/EduCore/docs/database/study-plans-and-enrollments.md)
-  - [Dokumentasi REST API KRS & Registrasi](file:///d:/share/SARONI/PROJECTS/EduCore/docs/api/study-plans-and-enrollments.md)
-  - [Aturan Bisnis & Integritas Akademik KRS](file:///d:/share/SARONI/PROJECTS/EduCore/docs/business-rules/study-plans-and-enrollments.md)
-  - [Laporan & Panduan Pengujian Fase 09](file:///d:/share/SARONI/PROJECTS/EduCore/docs/testing/fase-09-study-plans-and-enrollments.md)
+  - [Dokumentasi Basis Data KRS & Registrasi](docs/database/study-plans-and-enrollments.md)
+  - [Dokumentasi REST API KRS & Registrasi](docs/api/study-plans-and-enrollments.md)
+  - [Aturan Bisnis & Integritas Akademik KRS](docs/business-rules/study-plans-and-enrollments.md)
+  - [Laporan & Panduan Pengujian Fase 09](docs/testing/fase-09-study-plans-and-enrollments.md)
 - **Penawaran Kelas dan Jadwal Perkuliahan (Fase 08)**:
-  - [Dokumentasi Basis Data Penawaran Kelas & Jadwal](file:///d:/share/SARONI/PROJECTS/EduCore/docs/database/course-offerings-and-schedules.md)
-  - [Dokumentasi REST API Penawaran Kelas & Jadwal](file:///d:/share/SARONI/PROJECTS/EduCore/docs/api/course-offerings-and-schedules.md)
-  - [Aturan Bisnis & Integritas Bentrok Jadwal](file:///d:/share/SARONI/PROJECTS/EduCore/docs/business-rules/course-offerings-and-schedules.md)
-  - [Laporan & Panduan Pengujian Fase 08](file:///d:/share/SARONI/PROJECTS/EduCore/docs/testing/fase-08-course-offerings-and-schedules.md)
+  - [Dokumentasi Basis Data Penawaran Kelas & Jadwal](docs/database/course-offerings-and-schedules.md)
+  - [Dokumentasi REST API Penawaran Kelas & Jadwal](docs/api/course-offerings-and-schedules.md)
+  - [Aturan Bisnis & Integritas Bentrok Jadwal](docs/business-rules/course-offerings-and-schedules.md)
+  - [Laporan & Panduan Pengujian Fase 08](docs/testing/fase-08-course-offerings-and-schedules.md)
 - **Mata Kuliah dan Kurikulum (Fase 07)**:
-  - [Dokumentasi Basis Data Mata Kuliah & Kurikulum](file:///d:/share/SARONI/PROJECTS/EduCore/docs/database/courses-and-curricula.md)
-  - [Dokumentasi REST API Mata Kuliah & Kurikulum](file:///d:/share/SARONI/PROJECTS/EduCore/docs/api/courses-and-curricula.md)
-  - [Aturan Bisnis & Integritas SKS](file:///d:/share/SARONI/PROJECTS/EduCore/docs/business-rules/courses-and-curricula.md)
-  - [Laporan & Panduan Pengujian Fase 07](file:///d:/share/SARONI/PROJECTS/EduCore/docs/testing/fase-07-courses-and-curricula.md)
+  - [Dokumentasi Basis Data Mata Kuliah & Kurikulum](docs/database/courses-and-curricula.md)
+  - [Dokumentasi REST API Mata Kuliah & Kurikulum](docs/api/courses-and-curricula.md)
+  - [Aturan Bisnis & Integritas SKS](docs/business-rules/courses-and-curricula.md)
+  - [Laporan & Panduan Pengujian Fase 07](docs/testing/fase-07-courses-and-curricula.md)
 - **Data Master Akademik (Fase 06)**:
-  - [Dokumentasi Basis Data Data Master](file:///d:/share/SARONI/PROJECTS/EduCore/docs/database/data-master.md)
-  - [Dokumentasi REST API Data Master](file:///d:/share/SARONI/PROJECTS/EduCore/docs/api/data-master.md)
-  - [Aturan Bisnis & Integritas Akademik](file:///d:/share/SARONI/PROJECTS/EduCore/docs/business-rules/data-master.md)
-  - [Laporan & Panduan Pengujian Data Master](file:///d:/share/SARONI/PROJECTS/EduCore/docs/testing/fase-06-data-master.md)
+  - [Dokumentasi Basis Data Data Master](docs/database/data-master.md)
+  - [Dokumentasi REST API Data Master](docs/api/data-master.md)
+  - [Aturan Bisnis & Integritas Akademik](docs/business-rules/data-master.md)
+  - [Laporan & Panduan Pengujian Data Master](docs/testing/fase-06-data-master.md)
 - **Keamanan & Autentikasi (Fase 05)**:
-  - [Dokumentasi Autentikasi](file:///d:/share/SARONI/PROJECTS/EduCore/docs/security/authentication.md)
-  - [Dokumentasi Otorisasi & RBAC](file:///d:/share/SARONI/PROJECTS/EduCore/docs/security/authorization.md)
-  - [Siklus Hidup Token & Sesi](file:///d:/share/SARONI/PROJECTS/EduCore/docs/security/token-lifecycle.md)
+  - [Dokumentasi Autentikasi](docs/security/authentication.md)
+  - [Dokumentasi Otorisasi & RBAC](docs/security/authorization.md)
+  - [Siklus Hidup Token & Sesi](docs/security/token-lifecycle.md)
 - **Database (Fase 04)**:
-  - [Arsitektur Database](file:///d:/share/SARONI/PROJECTS/EduCore/docs/database/database-architecture.md)
-  - [Konvensi Skema & Data Types](file:///d:/share/SARONI/PROJECTS/EduCore/docs/database/schema-conventions.md)
-  - [Panduan Migrasi](file:///d:/share/SARONI/PROJECTS/EduCore/docs/database/migrations.md)
-  - [Panduan Operasional & Backup](file:///d:/share/SARONI/PROJECTS/EduCore/docs/database/operations.md)
+  - [Arsitektur Database](docs/database/database-architecture.md)
+  - [Konvensi Skema & Data Types](docs/database/schema-conventions.md)
+  - [Panduan Migrasi](docs/database/migrations.md)
+  - [Panduan Operasional & Backup](docs/database/operations.md)
 - **REST API (Fase 03)**:
-  - [Spesifikasi OpenAPI 3.0](file:///d:/share/SARONI/PROJECTS/EduCore/api/openapi.yaml)
-  - [Konvensi REST API](file:///d:/share/SARONI/PROJECTS/EduCore/docs/api/rest-api-conventions.md)
-  - [Kamus Kode Error](file:///d:/share/SARONI/PROJECTS/EduCore/docs/api/error-codes.md)
+  - [Spesifikasi OpenAPI 3.0](api/openapi.yaml)
+  - [Konvensi REST API](docs/api/rest-api-conventions.md)
+  - [Kamus Kode Error](docs/api/error-codes.md)
 - **Arsitektur & Bisnis (Fase 01 & 02)**:
-  - [Panduan Modul Bisnis](file:///d:/share/SARONI/PROJECTS/EduCore/internal/modules/README.md)
-  - [Ikhtisar Bisnis SIAKAD](file:///d:/share/SARONI/PROJECTS/EduCore/docs/requirements/business-overview.md)
+  - [Panduan Modul Bisnis](internal/modules/README.md)
+  - [Ikhtisar Bisnis SIAKAD](docs/requirements/business-overview.md)
 
 ---
 
@@ -389,4 +468,5 @@ make db-version
 - **Fase 07**: Mata Kuliah & Kurikulum: Katalog Mata Kuliah, Prasyarat, Kurikulum, Agregasi SKS (Selesai)
 - **Fase 08**: Penawaran Kelas & Jadwal Perkuliahan: Periode Akademik, Penawaran MK, Kelas, Penugasan Dosen, Deteksi Bentrok Jadwal (Selesai)
 - **Fase 09**: KRS & Registrasi Mahasiswa: Study Plans, Pendaftaran Kelas, Atomic Locking Kuota, Max 24 SKS, Bentrok Jadwal, Pembatalan Kelas (Selesai)
-- **Fase 10+**: Modul Operasional Akademik Lanjutan (Presensi Perkuliahan, Penilaian Dosen, Indeks Prestasi IP/IPK, Transkrip Akademik) *(Belum dimulai)*
+- **Fase 10**: Presensi dan Kehadiran Mahasiswa: Sesi Perkuliahan, Roster Peserta, Batch Attendance Atomic, ON CONFLICT Row Locking, Rekapitulasi Kehadiran (Selesai)
+- **Fase 11+**: Modul Penilaian & Kelulusan (Nilai Akhir Dosen, Transkrip Akademik, Perhitungan IPK) *(Belum dimulai)*
