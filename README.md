@@ -272,6 +272,34 @@ curl -i -X POST http://localhost:8080/api/v1/classes/<CLASS_ID>/schedules \
   -d '{"day_of_week":1,"start_time":"08:00","end_time":"10:00","room":"LAB-1","delivery_mode":"OFFLINE"}'
 ```
 
+### Q. Mahasiswa Melihat Penawaran Kelas untuk KRS (Fase 09)
+```bash
+curl -i -X GET "http://localhost:8080/api/v1/student/course-offerings?period_id=<PERIOD_ID>" \
+  -H "Authorization: Bearer <STUDENT_ACCESS_TOKEN>"
+```
+
+### R. Mahasiswa Membuat atau Mengambil KRS
+```bash
+curl -i -X POST http://localhost:8080/api/v1/student/study-plans \
+  -H "Authorization: Bearer <STUDENT_ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"academic_period_id":"<PERIOD_ID>"}'
+```
+
+### S. Mahasiswa Mendaftarkan Kelas ke KRS (Validasi Kapasitas, Max 24 SKS, Bentrok Jadwal)
+```bash
+curl -i -X POST http://localhost:8080/api/v1/student/study-plans/<STUDY_PLAN_ID>/enrollments \
+  -H "Authorization: Bearer <STUDENT_ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"class_id":"<CLASS_ID>"}'
+```
+
+### T. Mahasiswa Membatalkan Kelas dari KRS (Drop Enrollment)
+```bash
+curl -i -X DELETE http://localhost:8080/api/v1/student/study-plans/<STUDY_PLAN_ID>/enrollments/<ENROLLMENT_ID> \
+  -H "Authorization: Bearer <STUDENT_ACCESS_TOKEN>"
+```
+
 ---
 
 ## 6. Pengujian dan Kualitas Kode
@@ -311,6 +339,11 @@ make db-version
 
 ## 7. Dokumentasi Lengkap Proyek
 
+- **KRS dan Registrasi Mahasiswa (Fase 09)**:
+  - [Dokumentasi Basis Data KRS & Registrasi](file:///d:/share/SARONI/PROJECTS/EduCore/docs/database/study-plans-and-enrollments.md)
+  - [Dokumentasi REST API KRS & Registrasi](file:///d:/share/SARONI/PROJECTS/EduCore/docs/api/study-plans-and-enrollments.md)
+  - [Aturan Bisnis & Integritas Akademik KRS](file:///d:/share/SARONI/PROJECTS/EduCore/docs/business-rules/study-plans-and-enrollments.md)
+  - [Laporan & Panduan Pengujian Fase 09](file:///d:/share/SARONI/PROJECTS/EduCore/docs/testing/fase-09-study-plans-and-enrollments.md)
 - **Penawaran Kelas dan Jadwal Perkuliahan (Fase 08)**:
   - [Dokumentasi Basis Data Penawaran Kelas & Jadwal](file:///d:/share/SARONI/PROJECTS/EduCore/docs/database/course-offerings-and-schedules.md)
   - [Dokumentasi REST API Penawaran Kelas & Jadwal](file:///d:/share/SARONI/PROJECTS/EduCore/docs/api/course-offerings-and-schedules.md)
@@ -355,6 +388,5 @@ make db-version
 - **Fase 06**: Data Master Akademik: Fakultas, Program Studi, Dosen, Mahasiswa (Selesai)
 - **Fase 07**: Mata Kuliah & Kurikulum: Katalog Mata Kuliah, Prasyarat, Kurikulum, Agregasi SKS (Selesai)
 - **Fase 08**: Penawaran Kelas & Jadwal Perkuliahan: Periode Akademik, Penawaran MK, Kelas, Penugasan Dosen, Deteksi Bentrok Jadwal (Selesai)
-- **Fase 09+**: Modul Operasional Akademik (KRS/IRS, Presensi, Penilaian, IP/IPK, Transkrip Akademik) *(Belum dimulai)*
-
-
+- **Fase 09**: KRS & Registrasi Mahasiswa: Study Plans, Pendaftaran Kelas, Atomic Locking Kuota, Max 24 SKS, Bentrok Jadwal, Pembatalan Kelas (Selesai)
+- **Fase 10+**: Modul Operasional Akademik Lanjutan (Presensi Perkuliahan, Penilaian Dosen, Indeks Prestasi IP/IPK, Transkrip Akademik) *(Belum dimulai)*

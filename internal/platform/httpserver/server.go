@@ -17,6 +17,7 @@ import (
 	"educore/internal/modules/faculties"
 	"educore/internal/modules/lecturers"
 	"educore/internal/modules/students"
+	"educore/internal/modules/study_plans"
 	"educore/internal/modules/study_programs"
 	"educore/internal/platform/database"
 	appErrors "educore/internal/shared/errors"
@@ -184,6 +185,13 @@ func New(cfg *config.Config, logger *slog.Logger, dbPool *pgxpool.Pool) *Server 
 			clsService := classes.NewService(clsRepo, logger)
 			clsHandler := classes.NewHandler(clsService)
 			classes.RegisterRoutes(v1, clsHandler, authMiddleware, adminStaffMiddleware)
+
+			// Register Study Plans and Course Enrollments routes (Fase 09)
+			studentMiddleware := middleware.RequireRoles("mahasiswa")
+			studyPlanRepo := study_plans.NewRepository(dbPool)
+			studyPlanService := study_plans.NewService(studyPlanRepo, logger)
+			studyPlanHandler := study_plans.NewHandler(studyPlanService)
+			study_plans.RegisterRoutes(v1, studyPlanHandler, authMiddleware, studentMiddleware, adminStaffMiddleware)
 		}
 	}
 

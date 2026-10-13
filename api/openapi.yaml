@@ -6,8 +6,9 @@ info:
     Spesifikasi ini mencakup endpoint diagnostik, health check, Autentikasi dan Otorisasi (Fase 05),
     Data Master Akademik: Fakultas, Program Studi, Dosen, dan Mahasiswa (Fase 06),
     Mata Kuliah dan Kurikulum (Fase 07),
-    serta Penawaran Kelas dan Jadwal Perkuliahan (Fase 08).
-  version: 1.4.0
+    Penawaran Kelas dan Jadwal Perkuliahan (Fase 08),
+    serta KRS (Kartu Rencana Studi) dan Registrasi Mahasiswa (Fase 09).
+  version: 1.5.0
 servers:
   - url: http://localhost:8080
     description: Lingkungan Development Lokal
@@ -2169,6 +2170,466 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/student/course-offerings:
+    get:
+      summary: Daftar Penawaran Kelas untuk Mahasiswa
+      description: Menampilkan daftar kelas perkuliahan berstatus OPEN yang tersedia untuk registrasi KRS mahasiswa.
+      operationId: getStudentCourseOfferings
+      tags:
+        - Student KRS
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: period_id
+          in: query
+          required: false
+          description: ID periode akademik (default ke periode aktif jika kosong)
+          schema:
+            type: string
+            format: uuid
+        - name: study_program_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Daftar penawaran kelas berhasil diambil
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AvailableClassResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/student/study-plans:
+    get:
+      summary: Melihat Riwayat KRS Mahasiswa
+      description: Menampilkan daftar KRS yang dimiliki oleh mahasiswa yang sedang login.
+      operationId: getMyStudyPlans
+      tags:
+        - Student KRS
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: period_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Daftar KRS berhasil diambil
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StudyPlanResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      summary: Membuat atau Mengambil KRS Mahasiswa
+      description: Membuat KRS baru pada periode akademik aktif atau mengembalikan KRS yang sudah ada jika telah dibuat sebelumnya.
+      operationId: createMyStudyPlan
+      tags:
+        - Student KRS
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStudyPlanRequest'
+      responses:
+        '201':
+          description: KRS berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyPlanDetailResponse'
+        '200':
+          description: KRS untuk periode ini sudah ada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyPlanDetailResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/student/study-plans/{id}:
+    get:
+      summary: Melihat Detail KRS Sendiri
+      description: Menampilkan detail KRS milik mahasiswa yang login beserta seluruh kelas dan jadwal yang diambil.
+      operationId: getMyStudyPlanDetail
+      tags:
+        - Student KRS
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detail KRS berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyPlanDetailResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/student/study-plans/{id}/enrollments:
+    post:
+      summary: Mendaftarkan Kelas ke KRS Sendiri
+      description: Mendaftarkan kelas perkuliahan ke dalam KRS mahasiswa dengan validasi kapasitas, batas SKS (maks 24), dan deteksi bentrok jadwal.
+      operationId: enrollClassInMyStudyPlan
+      tags:
+        - Student KRS
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollClassRequest'
+      responses:
+        '201':
+          description: Kelas berhasil ditambahkan ke KRS
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrollmentResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/student/study-plans/{id}/enrollments/{enrollmentId}:
+    delete:
+      summary: Membatalkan Registrasi Kelas dari KRS Sendiri
+      description: Membatalkan kelas yang telah diambil, melepaskan kursi kelas, dan mengurangi beban SKS KRS.
+      operationId: dropEnrollmentFromMyStudyPlan
+      tags:
+        - Student KRS
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: enrollmentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Registrasi kelas berhasil dibatalkan
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/study-plans:
+    get:
+      summary: Daftar Seluruh KRS Mahasiswa (Admin & Akademik)
+      description: Menampilkan daftar seluruh KRS dengan filter mahasiswa, periode, dan status.
+      operationId: listStudyPlans
+      tags:
+        - Admin KRS
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: student_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: period_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Daftar KRS berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      summary: Membuat KRS Mahasiswa (Admin & Akademik)
+      description: Membuat KRS atas nama mahasiswa tertentu pada periode akademik yang ditentukan.
+      operationId: createStudyPlanAdmin
+      tags:
+        - Admin KRS
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStudyPlanRequest'
+      responses:
+        '201':
+          description: KRS berhasil dibuat
+        '200':
+          description: KRS sudah ada
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/study-plans/{id}:
+    get:
+      summary: Melihat Detail KRS (Admin & Akademik)
+      description: Menampilkan detail lengkap KRS mahasiswa beserta kelas yang diambil.
+      operationId: getStudyPlanDetailAdmin
+      tags:
+        - Admin KRS
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detail KRS berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/study-plans/{id}/enrollments:
+    post:
+      summary: Mendaftarkan Kelas ke KRS (Admin & Akademik)
+      description: Mendaftarkan kelas perkuliahan ke KRS mahasiswa atas nama petugas.
+      operationId: enrollClassAdmin
+      tags:
+        - Admin KRS
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollClassRequest'
+      responses:
+        '201':
+          description: Kelas berhasil ditambahkan
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/study-plans/{id}/enrollments/{enrollmentId}:
+    delete:
+      summary: Membatalkan Registrasi Kelas (Admin & Akademik)
+      description: Membatalkan registrasi kelas mahasiswa atas nama petugas.
+      operationId: dropEnrollmentAdmin
+      tags:
+        - Admin KRS
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: enrollmentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Registrasi kelas berhasil dibatalkan
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -3202,3 +3663,174 @@ components:
         delivery_mode:
           type: string
           enum: [OFFLINE, ONLINE, HYBRID]
+
+    CreateStudyPlanRequest:
+      type: object
+      required:
+        - academic_period_id
+      properties:
+        academic_period_id:
+          type: string
+          format: uuid
+        student_id:
+          type: string
+          format: uuid
+          description: Wajib diisi jika request dilakukan oleh admin/akademik
+
+    EnrollClassRequest:
+      type: object
+      required:
+        - class_id
+      properties:
+        class_id:
+          type: string
+          format: uuid
+
+    StudyPlanResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        student_id:
+          type: string
+          format: uuid
+        student_nim:
+          type: string
+        student_name:
+          type: string
+        study_program_id:
+          type: string
+          format: uuid
+        study_program_name:
+          type: string
+        academic_period_id:
+          type: string
+          format: uuid
+        academic_period_code:
+          type: string
+        academic_period_name:
+          type: string
+        total_credits:
+          type: integer
+          example: 18
+        status:
+          type: string
+          enum: [DRAFT, ACTIVE, CANCELLED]
+          example: ACTIVE
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    EnrollmentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        study_plan_id:
+          type: string
+          format: uuid
+        student_id:
+          type: string
+          format: uuid
+        class_id:
+          type: string
+          format: uuid
+        class_code:
+          type: string
+          example: "A"
+        class_name:
+          type: string
+          example: "Kelas Algoritma A"
+        course_id:
+          type: string
+          format: uuid
+        course_code:
+          type: string
+          example: "IF101"
+        course_name:
+          type: string
+          example: "Algoritma & Pemrograman"
+        course_credits:
+          type: integer
+          example: 4
+        status:
+          type: string
+          enum: [ENROLLED, DROPPED, CANCELLED]
+          example: ENROLLED
+        enrolled_at:
+          type: string
+          format: date-time
+        dropped_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    StudyPlanDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/StudyPlanResponse'
+        - type: object
+          properties:
+            enrollments:
+              type: array
+              items:
+                $ref: '#/components/schemas/EnrollmentResponse'
+
+    AvailableClassResponse:
+      type: object
+      properties:
+        class_id:
+          type: string
+          format: uuid
+        class_code:
+          type: string
+          example: "A"
+        class_name:
+          type: string
+          example: "Kelas Algoritma A"
+        capacity:
+          type: integer
+          example: 40
+        enrolled_count:
+          type: integer
+          example: 25
+        available_seats:
+          type: integer
+          example: 15
+        class_status:
+          type: string
+          example: "OPEN"
+        course_offering_id:
+          type: string
+          format: uuid
+        offering_status:
+          type: string
+          example: "OPEN"
+        course_id:
+          type: string
+          format: uuid
+        course_code:
+          type: string
+          example: "IF101"
+        course_name:
+          type: string
+          example: "Algoritma & Pemrograman"
+        course_credits:
+          type: integer
+          example: 4
+        academic_period_id:
+          type: string
+          format: uuid
+        academic_period_code:
+          type: string
+          example: "20241"
+        study_program_id:
+          type: string
+          format: uuid
+        study_program_name:
+          type: string
+          example: "Informatika"
