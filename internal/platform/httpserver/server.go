@@ -8,7 +8,10 @@ import (
 
 	"educore/internal/config"
 	"educore/internal/middleware"
+	"educore/internal/modules/academic_periods"
 	"educore/internal/modules/auth"
+	"educore/internal/modules/classes"
+	"educore/internal/modules/course_offerings"
 	"educore/internal/modules/courses"
 	"educore/internal/modules/curricula"
 	"educore/internal/modules/faculties"
@@ -163,6 +166,24 @@ func New(cfg *config.Config, logger *slog.Logger, dbPool *pgxpool.Pool) *Server 
 			curriService := curricula.NewService(curriRepo, logger)
 			curriHandler := curricula.NewHandler(curriService, logger)
 			curricula.RegisterRoutes(v1, curriHandler, authMiddleware, adminStaffMiddleware)
+
+			// Register Academic Periods routes
+			apRepo := academic_periods.NewRepository(dbPool)
+			apService := academic_periods.NewService(apRepo, logger)
+			apHandler := academic_periods.NewHandler(apService)
+			academic_periods.RegisterRoutes(v1, apHandler, authMiddleware, adminStaffMiddleware)
+
+			// Register Course Offerings routes
+			coRepo := course_offerings.NewRepository(dbPool)
+			coService := course_offerings.NewService(coRepo, logger)
+			coHandler := course_offerings.NewHandler(coService)
+			course_offerings.RegisterRoutes(v1, coHandler, authMiddleware, adminStaffMiddleware)
+
+			// Register Classes routes (classes, class lecturers, class schedules)
+			clsRepo := classes.NewRepository(dbPool)
+			clsService := classes.NewService(clsRepo, logger)
+			clsHandler := classes.NewHandler(clsService)
+			classes.RegisterRoutes(v1, clsHandler, authMiddleware, adminStaffMiddleware)
 		}
 	}
 

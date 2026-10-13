@@ -232,6 +232,46 @@ curl -i -X POST http://localhost:8080/api/v1/curricula/<CURRICULUM_ID>/courses \
   -d '{"course_id":"<COURSE_ID>","recommended_semester":1,"category":"REQUIRED"}'
 ```
 
+### L. Membuat Periode Akademik
+```bash
+curl -i -X POST http://localhost:8080/api/v1/academic-periods \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"code":"20241","name":"Semester Ganjil 2024/2025","semester_type":"ODD","start_date":"2024-09-01","end_date":"2025-01-31","is_active":true}'
+```
+
+### M. Membuat Penawaran Mata Kuliah
+```bash
+curl -i -X POST http://localhost:8080/api/v1/course-offerings \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"academic_period_id":"<PERIOD_ID>","course_id":"<COURSE_ID>","study_program_id":"<PRODI_ID>"}'
+```
+
+### N. Membuka Kelas Perkuliahan
+```bash
+curl -i -X POST http://localhost:8080/api/v1/classes \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"course_offering_id":"<OFFERING_ID>","code":"A","name":"Kelas A - Reguler Pagi","capacity":40}'
+```
+
+### O. Menugaskan Dosen ke Kelas
+```bash
+curl -i -X POST http://localhost:8080/api/v1/classes/<CLASS_ID>/lecturers \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"lecturer_id":"<LECTURER_ID>","role":"COORDINATOR"}'
+```
+
+### P. Menambahkan Jadwal Perkuliahan (Deteksi Bentrok)
+```bash
+curl -i -X POST http://localhost:8080/api/v1/classes/<CLASS_ID>/schedules \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"day_of_week":1,"start_time":"08:00","end_time":"10:00","room":"LAB-1","delivery_mode":"OFFLINE"}'
+```
+
 ---
 
 ## 6. Pengujian dan Kualitas Kode
@@ -271,6 +311,11 @@ make db-version
 
 ## 7. Dokumentasi Lengkap Proyek
 
+- **Penawaran Kelas dan Jadwal Perkuliahan (Fase 08)**:
+  - [Dokumentasi Basis Data Penawaran Kelas & Jadwal](file:///d:/share/SARONI/PROJECTS/EduCore/docs/database/course-offerings-and-schedules.md)
+  - [Dokumentasi REST API Penawaran Kelas & Jadwal](file:///d:/share/SARONI/PROJECTS/EduCore/docs/api/course-offerings-and-schedules.md)
+  - [Aturan Bisnis & Integritas Bentrok Jadwal](file:///d:/share/SARONI/PROJECTS/EduCore/docs/business-rules/course-offerings-and-schedules.md)
+  - [Laporan & Panduan Pengujian Fase 08](file:///d:/share/SARONI/PROJECTS/EduCore/docs/testing/fase-08-course-offerings-and-schedules.md)
 - **Mata Kuliah dan Kurikulum (Fase 07)**:
   - [Dokumentasi Basis Data Mata Kuliah & Kurikulum](file:///d:/share/SARONI/PROJECTS/EduCore/docs/database/courses-and-curricula.md)
   - [Dokumentasi REST API Mata Kuliah & Kurikulum](file:///d:/share/SARONI/PROJECTS/EduCore/docs/api/courses-and-curricula.md)
@@ -309,5 +354,7 @@ make db-version
 - **Fase 05**: Autentikasi & Otorisasi RBAC, Argon2id, JWT, Refresh Token Rotation (Selesai)
 - **Fase 06**: Data Master Akademik: Fakultas, Program Studi, Dosen, Mahasiswa (Selesai)
 - **Fase 07**: Mata Kuliah & Kurikulum: Katalog Mata Kuliah, Prasyarat, Kurikulum, Agregasi SKS (Selesai)
-- **Fase 08+**: Modul Operasional Akademik (Periode Akademik, Kelas Perkuliahan, Jadwal, KRS/IRS, Presensi, Penilaian, IP/IPK, Transkrip Akademik) *(Belum dimulai)*
+- **Fase 08**: Penawaran Kelas & Jadwal Perkuliahan: Periode Akademik, Penawaran MK, Kelas, Penugasan Dosen, Deteksi Bentrok Jadwal (Selesai)
+- **Fase 09+**: Modul Operasional Akademik (KRS/IRS, Presensi, Penilaian, IP/IPK, Transkrip Akademik) *(Belum dimulai)*
+
 

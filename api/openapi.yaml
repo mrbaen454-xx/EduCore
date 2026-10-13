@@ -5,8 +5,9 @@ info:
     Fondasi REST API EduCore (SIAKAD) - Modular Monolith backend.
     Spesifikasi ini mencakup endpoint diagnostik, health check, Autentikasi dan Otorisasi (Fase 05),
     Data Master Akademik: Fakultas, Program Studi, Dosen, dan Mahasiswa (Fase 06),
-    serta Mata Kuliah dan Kurikulum (Fase 07).
-  version: 1.3.0
+    Mata Kuliah dan Kurikulum (Fase 07),
+    serta Penawaran Kelas dan Jadwal Perkuliahan (Fase 08).
+  version: 1.4.0
 servers:
   - url: http://localhost:8080
     description: Lingkungan Development Lokal
@@ -1464,6 +1465,710 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/academic-periods:
+    post:
+      summary: Membuat Periode Akademik
+      operationId: createAcademicPeriod
+      tags:
+        - Academic Periods
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAcademicPeriodRequest'
+      responses:
+        '201':
+          description: Periode akademik berhasil dibuat
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    get:
+      summary: Menampilkan Daftar Periode Akademik
+      operationId: listAcademicPeriods
+      tags:
+        - Academic Periods
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: semester_type
+          in: query
+          schema:
+            type: string
+            enum: [ODD, EVEN, SHORT]
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: sort
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Daftar periode akademik berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/academic-periods/{id}:
+    get:
+      summary: Menampilkan Detail Periode Akademik
+      operationId: getAcademicPeriodDetail
+      tags:
+        - Academic Periods
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detail periode akademik berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      summary: Memperbarui Periode Akademik
+      operationId: updateAcademicPeriod
+      tags:
+        - Academic Periods
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAcademicPeriodRequest'
+      responses:
+        '200':
+          description: Periode akademik berhasil diperbarui
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/course-offerings:
+    post:
+      summary: Membuat Penawaran Mata Kuliah
+      operationId: createCourseOffering
+      tags:
+        - Course Offerings
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCourseOfferingRequest'
+      responses:
+        '201':
+          description: Penawaran mata kuliah berhasil dibuat
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    get:
+      summary: Menampilkan Daftar Penawaran Mata Kuliah
+      operationId: listCourseOfferings
+      tags:
+        - Course Offerings
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: academic_period_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: study_program_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: course_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: curriculum_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PLANNED, OPEN, CLOSED, CANCELLED]
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: sort
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Daftar penawaran mata kuliah berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/course-offerings/{id}:
+    get:
+      summary: Menampilkan Detail Penawaran Mata Kuliah
+      operationId: getCourseOfferingDetail
+      tags:
+        - Course Offerings
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detail penawaran mata kuliah berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/course-offerings/{id}/status:
+    patch:
+      summary: Mengubah Status Penawaran Mata Kuliah
+      operationId: updateCourseOfferingStatus
+      tags:
+        - Course Offerings
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCourseOfferingStatusRequest'
+      responses:
+        '200':
+          description: Status penawaran berhasil diperbarui
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/classes:
+    post:
+      summary: Membuat Kelas Perkuliahan
+      operationId: createClass
+      tags:
+        - Classes
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClassRequest'
+      responses:
+        '201':
+          description: Kelas perkuliahan berhasil dibuat
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    get:
+      summary: Menampilkan Daftar Kelas Perkuliahan
+      operationId: listClasses
+      tags:
+        - Classes
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: academic_period_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: course_offering_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: study_program_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [DRAFT, OPEN, IN_PROGRESS, CLOSED, CANCELLED]
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: sort
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Daftar kelas berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/classes/{id}:
+    get:
+      summary: Menampilkan Detail Kelas Perkuliahan
+      operationId: getClassDetail
+      tags:
+        - Classes
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detail kelas berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      summary: Memperbarui Metadata Kelas
+      operationId: updateClass
+      tags:
+        - Classes
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClassRequest'
+      responses:
+        '200':
+          description: Kelas berhasil diperbarui
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/classes/{id}/status:
+    patch:
+      summary: Mengubah Status Kelas Perkuliahan
+      operationId: updateClassStatus
+      tags:
+        - Classes
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClassStatusRequest'
+      responses:
+        '200':
+          description: Status kelas berhasil diperbarui
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/classes/{id}/lecturers:
+    post:
+      summary: Menugaskan Dosen ke Kelas
+      operationId: assignLecturerToClass
+      tags:
+        - Classes
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignLecturerRequest'
+      responses:
+        '201':
+          description: Dosen berhasil ditugaskan ke kelas
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    get:
+      summary: Menampilkan Daftar Dosen Pengajar Kelas
+      operationId: listClassLecturers
+      tags:
+        - Classes
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Daftar dosen pengajar berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/classes/{id}/lecturers/{lecturerId}:
+    delete:
+      summary: Menghapus Penugasan Dosen dari Kelas
+      operationId: removeLecturerFromClass
+      tags:
+        - Classes
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: lecturerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Penugasan dosen berhasil dihapus
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/classes/{id}/schedules:
+    post:
+      summary: Menambahkan Jadwal Perkuliahan Kelas
+      operationId: createClassSchedule
+      tags:
+        - Classes
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScheduleRequest'
+      responses:
+        '201':
+          description: Jadwal perkuliahan berhasil dibuat
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    get:
+      summary: Menampilkan Daftar Jadwal Perkuliahan Kelas
+      operationId: listClassSchedules
+      tags:
+        - Classes
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Daftar jadwal berhasil diambil
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/classes/{id}/schedules/{scheduleId}:
+    patch:
+      summary: Memperbarui Jadwal Perkuliahan
+      operationId: updateClassSchedule
+      tags:
+        - Classes
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: scheduleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateScheduleRequest'
+      responses:
+        '200':
+          description: Jadwal berhasil diperbarui
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      summary: Menghapus Jadwal Perkuliahan
+      operationId: deleteClassSchedule
+      tags:
+        - Classes
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestIDHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: scheduleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Jadwal berhasil dihapus
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -2311,3 +3016,189 @@ components:
         category:
           type: string
           enum: [REQUIRED, ELECTIVE]
+
+    CreateAcademicPeriodRequest:
+      type: object
+      required:
+        - code
+        - name
+        - semester_type
+        - start_date
+        - end_date
+      properties:
+        code:
+          type: string
+          example: "20241"
+        name:
+          type: string
+          example: "Semester Ganjil 2024/2025"
+        semester_type:
+          type: string
+          enum: [ODD, EVEN, SHORT]
+          example: "ODD"
+        start_date:
+          type: string
+          format: date
+          example: "2024-09-01"
+        end_date:
+          type: string
+          format: date
+          example: "2025-01-31"
+        is_active:
+          type: boolean
+          example: true
+
+    UpdateAcademicPeriodRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        semester_type:
+          type: string
+          enum: [ODD, EVEN, SHORT]
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        is_active:
+          type: boolean
+
+    CreateCourseOfferingRequest:
+      type: object
+      required:
+        - academic_period_id
+        - course_id
+        - study_program_id
+      properties:
+        academic_period_id:
+          type: string
+          format: uuid
+        course_id:
+          type: string
+          format: uuid
+        study_program_id:
+          type: string
+          format: uuid
+        curriculum_id:
+          type: string
+          format: uuid
+          nullable: true
+
+    UpdateCourseOfferingStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [PLANNED, OPEN, CLOSED, CANCELLED]
+          example: OPEN
+
+    CreateClassRequest:
+      type: object
+      required:
+        - course_offering_id
+        - code
+        - name
+        - capacity
+      properties:
+        course_offering_id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          example: "A"
+        name:
+          type: string
+          example: "Kelas A - Reguler Pagi"
+        capacity:
+          type: integer
+          minimum: 1
+          example: 40
+        remarks:
+          type: string
+          nullable: true
+
+    UpdateClassRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        capacity:
+          type: integer
+          minimum: 1
+        remarks:
+          type: string
+          nullable: true
+
+    UpdateClassStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [DRAFT, OPEN, IN_PROGRESS, CLOSED, CANCELLED]
+          example: OPEN
+
+    AssignLecturerRequest:
+      type: object
+      required:
+        - lecturer_id
+        - role
+      properties:
+        lecturer_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [COORDINATOR, TEAM_TEACHING]
+          example: COORDINATOR
+
+    CreateScheduleRequest:
+      type: object
+      required:
+        - day_of_week
+        - start_time
+        - end_time
+        - delivery_mode
+      properties:
+        day_of_week:
+          type: integer
+          minimum: 1
+          maximum: 7
+          example: 1
+        start_time:
+          type: string
+          example: "08:00"
+        end_time:
+          type: string
+          example: "10:00"
+        room:
+          type: string
+          nullable: true
+          example: "LAB-1"
+        delivery_mode:
+          type: string
+          enum: [OFFLINE, ONLINE, HYBRID]
+          example: OFFLINE
+
+    UpdateScheduleRequest:
+      type: object
+      properties:
+        day_of_week:
+          type: integer
+          minimum: 1
+          maximum: 7
+        start_time:
+          type: string
+        end_time:
+          type: string
+        room:
+          type: string
+          nullable: true
+        delivery_mode:
+          type: string
+          enum: [OFFLINE, ONLINE, HYBRID]
